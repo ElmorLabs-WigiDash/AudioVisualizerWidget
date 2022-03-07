@@ -1,14 +1,15 @@
 ﻿using FrontierWidgetFramework;
+using FrontierWidgetFramework.WidgetUtility;
 using System;
 using System.Drawing;
 
 namespace AudioVisualizerWidget {
-    public partial class AudioVisualizerWidget : IWidgetServer {
+    public partial class AudioVisualizerWidget : IWidgetObject {
 
         // Functionality
         public string ResourcePath;
 
-        public ErrorCode Load(string resource_path) {
+        public WidgetError Load(string resource_path) {
             this.ResourcePath = resource_path;
             widgetPreview2x2 = new Bitmap(ResourcePath + "2x2.png");
             widgetPreview3x2 = new Bitmap(ResourcePath + "3x2.png");
@@ -17,33 +18,20 @@ namespace AudioVisualizerWidget {
             widgetPreview5x1 = new Bitmap(ResourcePath + "5x1.png");
             widgetPreview5x2 = new Bitmap(ResourcePath + "5x2.png");
 
-
-
-            // Register widget
-            WidgetManager.RegisterWidget(this);
-            return ErrorCode.NoError;
+            return WidgetError.NO_ERROR;
         }
 
-        public ErrorCode Unload() {
-            return ErrorCode.NoError;
+        public WidgetError Unload() {
+            return WidgetError.NO_ERROR;
         }
 
         public Bitmap GetWidgetPreview(WidgetSize widget_size) {
-            switch (widget_size)
-            {
-                case WidgetSize.SIZE_2X2:
-                    return widgetPreview2x2;
-                case WidgetSize.SIZE_3X2:
-                    return widgetPreview3x2;
-                case WidgetSize.SIZE_4X2:
-                    return widgetPreview4x2;
-                case WidgetSize.SIZE_4X3:
-                    return widgetPreview4x3;
-                case WidgetSize.SIZE_5X1:
-                    return widgetPreview5x1;
-                case WidgetSize.SIZE_5X2:
-                    return widgetPreview5x2;
-            }
+            if (widget_size.Equals(2, 2)) return widgetPreview2x2;
+            if (widget_size.Equals(3, 2)) return widgetPreview3x2;
+            if (widget_size.Equals(4, 2)) return widgetPreview4x2;
+            if (widget_size.Equals(4, 3)) return widgetPreview4x3;
+            if (widget_size.Equals(5, 1)) return widgetPreview5x1;
+            if (widget_size.Equals(5, 2)) return widgetPreview5x2;
 
             return widgetPreview5x1;
         }

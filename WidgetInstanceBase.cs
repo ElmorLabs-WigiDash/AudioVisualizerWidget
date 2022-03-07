@@ -1,4 +1,5 @@
 ﻿using FrontierWidgetFramework;
+using FrontierWidgetFramework.WidgetUtility;
 using System;
 using System.Drawing;
 
@@ -8,7 +9,8 @@ namespace AudioVisualizerWidget {
 
         // Identity
         private AudioVisualizerWidget parent;
-        public IWidgetServer Parent { 
+        public IWidgetObject WidgetObject
+        { 
             get { 
                 return parent;
             }
@@ -16,21 +18,10 @@ namespace AudioVisualizerWidget {
         public Guid Guid { get; set; }
 
         // Size
-        public Size Size { get; set; }
+        public WidgetSize WidgetSize { get; set; }
 
-        // Capabilities
-        public bool HasSettings {
-            get {
-                return true;
-            }
-        }
-
+        // Events
         public event WidgetUpdatedEventHandler WidgetUpdated;
-
-        /*protected virtual void OnWidgetUpdated(WidgetUpdatedEventArgs e) {
-            WidgetUpdatedEventHandler handler = WidgetUpdated;
-            handler?.Invoke(this, e);
-        }*/
 
     }
 }

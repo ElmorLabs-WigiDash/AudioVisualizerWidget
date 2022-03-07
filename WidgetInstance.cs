@@ -3,10 +3,11 @@ using System;
 using System.Drawing;
 using NAudio.Wave;
 using System.Threading;
-using System.Windows.Forms;
 using NAudio.CoreAudioApi;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using FrontierWidgetFramework.WidgetUtility;
+using System.Windows.Controls;
 
 namespace AudioVisualizerWidget {
     public partial class WidgetInstance {
@@ -48,10 +49,10 @@ namespace AudioVisualizerWidget {
             // Global
             this.parent = parent;
             this.Guid = instance_guid;
-            this.Size = widget_size.ToSize();
+            this.WidgetSize = widget_size;
 
             // Widget Properties
-            visualizerSize = this.Size;
+            visualizerSize = this.WidgetSize.ToSize();
             BitmapCurrent = new Bitmap(visualizerSize.Width, visualizerSize.Height);
 
             // UI
@@ -124,7 +125,7 @@ namespace AudioVisualizerWidget {
                 SaveSettings();
             } catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                //MessageBox.Show(ex.Message);
             }
         }
 
@@ -371,12 +372,6 @@ namespace AudioVisualizerWidget {
             }
         }
 
-        public void ShowSettings()
-        {
-            SettingsForm sf = new SettingsForm(this);
-            sf.Show();
-        }
-
         public void Dispose()
         {
             pause_drawing = true;
@@ -393,6 +388,11 @@ namespace AudioVisualizerWidget {
         {
             pause_drawing = false;
             UpdateWidget();
+        }
+
+        public UserControl GetSettingsControl()
+        {
+            return new SettingsUserControl(this);
         }
     }
 

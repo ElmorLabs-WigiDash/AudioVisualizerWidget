@@ -1,9 +1,10 @@
 ﻿using FrontierWidgetFramework;
+using FrontierWidgetFramework.WidgetUtility;
 using System;
 using System.Collections.Generic;
 
 namespace AudioVisualizerWidget {
-    public partial class AudioVisualizerWidget : IWidgetServer {
+    public partial class AudioVisualizerWidget : IWidgetObject {
 
         // Identity
         public Guid Guid {
@@ -31,9 +32,9 @@ namespace AudioVisualizerWidget {
                 return "https://defyworks.com/";
             }
         }
-        public int Version {
+        public Version Version {
             get {
-                return 100;
+                return new Version(1,0,0);
             }
         }
         public string VersionString {
@@ -48,15 +49,18 @@ namespace AudioVisualizerWidget {
                 return SdkVersion.Version_0;
             }
         }
-        public List<WidgetSize> SupportedSizes {
-            get {
+
+        public List<WidgetSize> SupportedSizes
+        {
+            get
+            {
                 return new List<WidgetSize>() {
-                    WidgetSize.SIZE_2X2,
-                    WidgetSize.SIZE_3X2,
-                    WidgetSize.SIZE_4X2,
-                    WidgetSize.SIZE_4X3,
-                    WidgetSize.SIZE_5X1,
-                    WidgetSize.SIZE_5X2,
+                    new WidgetSize(2, 2),
+                    new WidgetSize(3, 2),
+                    new WidgetSize(4, 2),
+                    new WidgetSize(4, 3),
+                    new WidgetSize(5, 1),
+                    new WidgetSize(5, 2),
                 };
             }
         }

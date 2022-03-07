@@ -1,29 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace AudioVisualizerWidget
 {
     /// <summary>
     /// Interaction logic for SettingsControl.xaml
     /// </summary>
-    public partial class SettingsControl : UserControl
+    public partial class SettingsUserControl : UserControl
     {
-        WidgetInstance parent_widget_instance;
-        public SettingsControl()
+        private WidgetInstance Parent;
+        public SettingsUserControl(WidgetInstance parent)
         {
+            Parent = parent;
+
             InitializeComponent();
         }
 
@@ -31,7 +22,12 @@ namespace AudioVisualizerWidget
         {
             try
             {
-
+                Parent.visualizerBgColor = ColorTranslator.FromHtml(bgColor.Text);
+                Parent.visualizerBarColor = ColorTranslator.FromHtml(fgColor.Text);
+                Parent.visualizerDensity = (int)vdSlider.Value;
+                Parent.visualizerMultiplier = (int)vmSlider.Value;
+                Parent.UpdateSettings();
+                Parent.SaveSettings();
             }
             catch (Exception ex)
             {
