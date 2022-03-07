@@ -14,8 +14,16 @@ namespace AudioVisualizerWidget
         public SettingsUserControl(WidgetInstance parent)
         {
             Parent = parent;
-
+            Loaded += OnLoad;
             InitializeComponent();
+        }
+
+        private void OnLoad(object sender, RoutedEventArgs e)
+        {
+            bgColor.Text = ColorTranslator.ToHtml(Parent.visualizerBgColor);
+            fgColor.Text = ColorTranslator.ToHtml(Parent.visualizerBarColor);
+            vdSlider.Value = Parent.visualizerDensity;
+            vmSlider.Value = Parent.visualizerMultiplier;
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
