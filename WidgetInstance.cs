@@ -87,10 +87,10 @@ namespace AudioVisualizerWidget {
         /// </summary>
         public void SaveSettings()
         {
-            parent.WidgetManager.StoreSetting(Guid, "visualizerDensity", visualizerDensity.ToString());
-            parent.WidgetManager.StoreSetting(Guid, "visualizerMultiplier", visualizerMultiplier.ToString());
-            parent.WidgetManager.StoreSetting(Guid, "visualizerBgColor", ColorTranslator.ToHtml(visualizerBgColor));
-            parent.WidgetManager.StoreSetting(Guid, "visualizerBarColor", ColorTranslator.ToHtml(visualizerBarColor));
+            parent.WidgetManager.StoreSetting(this, "visualizerDensity", visualizerDensity.ToString());
+            parent.WidgetManager.StoreSetting(this, "visualizerMultiplier", visualizerMultiplier.ToString());
+            parent.WidgetManager.StoreSetting(this, "visualizerBgColor", ColorTranslator.ToHtml(visualizerBgColor));
+            parent.WidgetManager.StoreSetting(this, "visualizerBarColor", ColorTranslator.ToHtml(visualizerBarColor));
         }
 
         /// <summary>
@@ -104,10 +104,10 @@ namespace AudioVisualizerWidget {
             string visualizerBgColorStr;
             string visualizerBarColorStr;
 
-            parent.WidgetManager.LoadSetting(Guid, "visualizerDensity", out visualizerDensityStr);
-            parent.WidgetManager.LoadSetting(Guid, "visualizerMultiplier", out visualizerMultiplierStr);
-            parent.WidgetManager.LoadSetting(Guid, "visualizerBgColor", out visualizerBgColorStr);
-            parent.WidgetManager.LoadSetting(Guid, "visualizerBarColor", out visualizerBarColorStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerDensity", out visualizerDensityStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerMultiplier", out visualizerMultiplierStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerBgColor", out visualizerBgColorStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerBarColor", out visualizerBarColorStr);
 
             // Actually parse and set settings
             try
