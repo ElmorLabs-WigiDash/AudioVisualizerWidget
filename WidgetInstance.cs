@@ -13,16 +13,16 @@ namespace AudioVisualizerWidget {
     public partial class WidgetInstance {
 
         // Allow console for easier debug
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool AllocConsole();
+        //[DllImport("kernel32.dll", SetLastError = true)]
+        //[return: MarshalAs(UnmanagedType.Bool)]
+        //static extern bool AllocConsole();
 
         // Threading Variables
         private bool pause_drawing = false;
         private bool is_drawing = false;
 
         // Variables
-        private bool DEBUG_FLAG = true;
+        //private bool DEBUG_FLAG = true;
 
         private WasapiLoopbackCaptureWorkaround audioCapture;
         private WaveBuffer audioBuffer;
@@ -44,7 +44,7 @@ namespace AudioVisualizerWidget {
 
         public WidgetInstance(AudioVisualizerWidget parent, WidgetSize widget_size, Guid instance_guid) {
             // Open Console if DEBUG
-            if (DEBUG_FLAG) AllocConsole();
+            //if (DEBUG_FLAG) AllocConsole();
 
             // Global
             this.parent = parent;
