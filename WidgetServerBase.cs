@@ -9,7 +9,7 @@ namespace AudioVisualizerWidget {
         // Identity
         public Guid Guid {
             get {
-                return new Guid("36dd71ba-fa7a-496b-82be-db664c1bc087");
+                return new Guid(GetType().Assembly.GetName().Name);
             }
         }
         public string Name {

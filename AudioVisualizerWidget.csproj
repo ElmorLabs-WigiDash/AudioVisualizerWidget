@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>AudioVisualizerWidget</RootNamespace>
-    <AssemblyName>Widget</AssemblyName>
+    <AssemblyName>36DD71BA-FA7A-496B-82BE-DB664C1BC087</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -123,7 +123,8 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy "$(TargetDir)\*" "$(SolutionDir)FrontierManager\bin\$(ConfigurationName)\net472\Widgets\36dd71ba-fa7a-496b-82be-db664c1bc087\" /F /Y</PostBuildEvent>
+    <PostBuildEvent>rd /s /q "$(SolutionDir)FrontierManager\bin\$(ConfigurationName)\Widgets\$(TargetName)\"
+xcopy "$(TargetDir)\*" "$(SolutionDir)FrontierManager\bin\$(ConfigurationName)\Widgets\$(TargetName)\" /F /Y</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>

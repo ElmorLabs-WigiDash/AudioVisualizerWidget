@@ -392,7 +392,7 @@ namespace AudioVisualizerWidget {
 
         public UserControl GetSettingsControl()
         {
-            return new SettingsUserControl(this);
+            return new SettingsControl(this);
         }
     }
 

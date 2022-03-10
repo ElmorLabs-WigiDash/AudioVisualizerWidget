@@ -8,10 +8,10 @@ namespace AudioVisualizerWidget
     /// <summary>
     /// Interaction logic for SettingsControl.xaml
     /// </summary>
-    public partial class SettingsUserControl : UserControl
+    public partial class SettingsControl : UserControl
     {
         private WidgetInstance Parent;
-        public SettingsUserControl(WidgetInstance parent)
+        public SettingsControl(WidgetInstance parent)
         {
             Parent = parent;
             Loaded += OnLoad;
