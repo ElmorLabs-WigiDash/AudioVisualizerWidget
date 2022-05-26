@@ -2,6 +2,7 @@
 using FrontierWidgetFramework.WidgetUtility;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace AudioVisualizerWidget {
     public partial class AudioVisualizerWidget : IWidgetObject {
@@ -37,11 +38,6 @@ namespace AudioVisualizerWidget {
                 return new Version(1,0,0);
             }
         }
-        public string VersionString {
-            get {
-                return "1.0.0";
-            }
-        }
 
         // Capabilities
         public SdkVersion TargetSdk {
@@ -62,6 +58,14 @@ namespace AudioVisualizerWidget {
                     new WidgetSize(5, 1),
                     new WidgetSize(5, 2),
                 };
+            }
+        }
+
+        public Bitmap PreviewImage
+        {
+            get
+            {
+                return new Bitmap(ResourcePath + "3x2.png");
             }
         }
 
