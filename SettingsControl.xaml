@@ -12,6 +12,15 @@
                 <ColumnDefinition></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
+            <Label Content="Graph Type:" FontSize="10"></Label>
+            <ComboBox x:Name="graphSelect" Grid.Column="1"></ComboBox>
+        </Grid>
+        
+        <Grid Margin="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition></ColumnDefinition>
+                <ColumnDefinition></ColumnDefinition>
+            </Grid.ColumnDefinitions>
             <Label Content="Background Color:" FontSize="10"></Label>
             <TextBox x:Name="bgColor" Grid.Column="1"></TextBox>
         </Grid>

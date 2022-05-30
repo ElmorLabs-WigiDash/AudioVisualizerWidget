@@ -36,7 +36,10 @@ namespace AudioVisualizerWidget {
         private float[] barValues;
         private Bitmap BitmapCurrent;
 
+        private NAudio.Dsp.Complex[] fftBuffer;
+
         // User Configurable Variables
+        public GraphType visualizerGraphType;
         public int visualizerDensity;
         public int visualizerMultiplier;
         public Color visualizerBgColor;
@@ -87,6 +90,7 @@ namespace AudioVisualizerWidget {
         /// </summary>
         public void SaveSettings()
         {
+            parent.WidgetManager.StoreSetting(this, "visualizerGraphType", visualizerGraphType.ToString());
             parent.WidgetManager.StoreSetting(this, "visualizerDensity", visualizerDensity.ToString());
             parent.WidgetManager.StoreSetting(this, "visualizerMultiplier", visualizerMultiplier.ToString());
             parent.WidgetManager.StoreSetting(this, "visualizerBgColor", ColorTranslator.ToHtml(visualizerBgColor));
@@ -99,11 +103,13 @@ namespace AudioVisualizerWidget {
         public void LoadSettings()
         {
             // Variable definitions
+            string visualizerGraphTypeStr;
             string visualizerDensityStr;
             string visualizerMultiplierStr;
             string visualizerBgColorStr;
             string visualizerBarColorStr;
 
+            parent.WidgetManager.LoadSetting(this, "visualizerGraphType", out visualizerGraphTypeStr);
             parent.WidgetManager.LoadSetting(this, "visualizerDensity", out visualizerDensityStr);
             parent.WidgetManager.LoadSetting(this, "visualizerMultiplier", out visualizerMultiplierStr);
             parent.WidgetManager.LoadSetting(this, "visualizerBgColor", out visualizerBgColorStr);
@@ -112,6 +118,8 @@ namespace AudioVisualizerWidget {
             // Actually parse and set settings
             try
             {
+                if (!string.IsNullOrEmpty(visualizerGraphTypeStr)) Enum.TryParse(visualizerGraphTypeStr, out GraphType visualizerGraphType);
+                else visualizerGraphType = GraphType.BarGraph;
                 if (!string.IsNullOrEmpty(visualizerDensityStr)) int.TryParse(visualizerDensityStr, out visualizerDensity);
                 else visualizerDensity = 5;
                 if (!string.IsNullOrEmpty(visualizerMultiplierStr)) int.TryParse(visualizerMultiplierStr, out visualizerMultiplier);
@@ -249,35 +257,23 @@ namespace AudioVisualizerWidget {
                         return;
                     }
 
+                    GetValues(buffer);
 
-                    // FFT
-                    int len = buffer.FloatBuffer.Length / 8;
-
-                    NAudio.Dsp.Complex[] values = new NAudio.Dsp.Complex[len];
-                    for (int i = 0; i < len; i++)
-                    {
-                        values[i].Y = 0;
-                        values[i].X = buffer.FloatBuffer[i];
-                    }
-                    NAudio.Dsp.FastFourierTransform.FFT(true, visualizerDensity, values);
+                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
                     // Clear board to draw visualizer
                     g.Clear(visualizerBgColor);
-                    
-                    // For each FFT values, draw a bar
-                    for (int i = 1; i < barCount; i++)
+
+                    switch (visualizerGraphType)
                     {
-                        float value = -(Math.Abs(values[i].X));
-                        float barHeight = BarHeightCalc(i, value);
+                        default:
+                        case GraphType.BarGraph:
+                            DrawBarGraph(g);
+                            break;
 
-                        RectangleF visualizerBar = VisualizerBar(
-                            (i - 1) * barWidth,
-                            visualizerSize.Height,
-                            barWidth,
-                            barHeight
-                        );
-
-                        g.FillRectangle(visualizerBrush, visualizerBar);
+                        case GraphType.LineGraph:
+                            DrawLineGraph(g);
+                            break;
                     }
 
                     // Flush
@@ -287,14 +283,83 @@ namespace AudioVisualizerWidget {
         }
 
         /// <summary>
+        /// Draw wavebuffer to a bar graph
+        /// </summary>
+        /// <param name="g">Graphics to draw bar to</param>
+        /// <returns></returns>
+        private void DrawBarGraph(Graphics g)
+        {
+            // For each FFT values, draw a bar
+            for (int i = 1; i < barCount; i++)
+            {
+                float value = -(Math.Abs(fftBuffer[i].X));
+                float barHeight = DrawingHeightCalc(i, value);
+
+                RectangleF visualizerBar = VisualizerBar(
+                    (i - 1) * barWidth,
+                    visualizerSize.Height,
+                    barWidth,
+                    barHeight
+                );
+
+                g.FillRectangle(visualizerBrush, visualizerBar);
+            }
+        }
+
+        /// <summary>
+        /// Draw wavebuffer to a line graph
+        /// </summary>
+        /// <param name="g">Graphics to draw bar to</param>
+        /// <returns></returns>
+        private void DrawLineGraph(Graphics g)
+        {
+            List<PointF> pointCoords = new List<PointF>();
+            float yOrigin = visualizerSize.Height - 5;
+            pointCoords.Add(new PointF(0, yOrigin));
+            // For each FFT values, draw a bar
+            for (int i = 1; i < barCount; i++)
+            {
+                float value = -(Math.Abs(fftBuffer[i].X));
+                float pointHeight = yOrigin - Math.Abs(DrawingHeightCalc(i, value));
+
+                PointF point = new PointF((i - 1) * barWidth + (barWidth / 2), pointHeight);
+                pointCoords.Add(point);
+            }
+            pointCoords.Add(new PointF(visualizerSize.Width, yOrigin));
+
+            Pen pen = new Pen(visualizerBarColor, 3);
+            g.DrawCurve(pen, pointCoords.ToArray());
+        }
+
+        /// <summary>
+        /// Get current audio source's output
+        /// </summary>
+        /// <param name="buffer">WaveBuffer to draw graphs from</param>
+        /// <returns></returns>
+        private void GetValues(WaveBuffer buffer)
+        {
+            int len = buffer.FloatBuffer.Length / 8;
+
+            fftBuffer = new NAudio.Dsp.Complex[len];
+
+            for (int i = 0; i < len; i++)
+            {
+                fftBuffer[i].Y = 0;
+                fftBuffer[i].X = buffer.FloatBuffer[i];
+            }
+
+            NAudio.Dsp.FastFourierTransform.FFT(true, visualizerDensity, fftBuffer);
+        }
+
+        /// <summary>
         /// Calculate visualizer bar height
         /// </summary>
         /// <param name="i">The nth place of bar</param>
         /// <param name="value">The FFT value of frequency</param>
         /// <returns></returns>
-        private float BarHeightCalc(int i, float value)
+        private float DrawingHeightCalc(int i, float value)
         {
-            if (Math.Abs(barValues[i]) > Math.Abs(value))
+            if (Math.Abs(barValues[i]) > Math.Abs(value) && fftBuffer != null)
             {
                 // Decay
                 barValues[i] = -(value * barValues[i]) * (95f / 100f);
