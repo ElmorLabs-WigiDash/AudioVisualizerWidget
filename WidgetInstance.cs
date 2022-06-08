@@ -20,6 +20,7 @@ namespace AudioVisualizerWidget {
         // Threading Variables
         private bool pause_drawing = false;
         private bool is_drawing = false;
+        private Mutex locking_mutex = new Mutex();
 
         // Variables
         //private bool DEBUG_FLAG = true;
@@ -243,7 +244,7 @@ namespace AudioVisualizerWidget {
         public void DrawWidget(WaveBuffer buffer)
         {
             // Check drawing conditions
-            if (!is_drawing && !pause_drawing)
+            if (locking_mutex.WaitOne(1000) && !is_drawing && !pause_drawing)
             {
                 using (Graphics g = Graphics.FromImage(BitmapCurrent))
                 {
@@ -279,6 +280,7 @@ namespace AudioVisualizerWidget {
                     // Flush
                     UpdateWidget();
                 }
+                locking_mutex.ReleaseMutex();
             }
         }
 
