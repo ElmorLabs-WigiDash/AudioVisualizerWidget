@@ -66,10 +66,30 @@ namespace AudioVisualizerWidget {
             LoadSettings();
 
             // Audio Capture
-            ScanForDevice();
+            //ScanForDevice();
 
             // Clear Widget
-            ClearWidget();
+            ClearWidget(); 
+            
+            Thread task_thread = new Thread(new ThreadStart(TaskThread));
+            task_thread.IsBackground = true;
+            run_task = true;
+            task_thread.Start();
+        }
+
+        private volatile bool run_task;
+
+        private void TaskThread() {
+            while(run_task) {
+                if(audioCapture == null) {
+                    bool result = ScanForDevice();
+                    if(result) {
+                        ClearWidget();
+                        pause_drawing = false;
+                    }
+                }
+                Thread.Sleep(1000);
+            }
         }
 
         /// <summary>
@@ -211,7 +231,7 @@ namespace AudioVisualizerWidget {
             audioCapture.Dispose();
 
             // Scan for changes in audio device
-            while (true)
+            /*while (true)
             {
                 bool result = ScanForDevice();
                 if (result)
@@ -221,7 +241,7 @@ namespace AudioVisualizerWidget {
                     break;
                 }
                 Thread.Sleep(1000);
-            }
+            }*/
         }
         
         /// <summary>
@@ -439,9 +459,13 @@ namespace AudioVisualizerWidget {
             }
         }
 
-        public void Dispose()
-        {
+        public void Dispose() {
             pause_drawing = true;
+            run_task = false;
+            if(audioCapture != null) {
+                audioCapture.StopRecording();
+                audioCapture.Dispose();
+            }
             Thread.Sleep(50);
             BitmapCurrent.Dispose();
         }
