@@ -518,6 +518,12 @@ namespace AudioVisualizerWidget {
         {
             return AudioClientStreamFlags.Loopback;
         }
+
+        protected new void Dispose()
+        {
+            StopRecording();
+            base.Dispose();
+        }
     }
 }
 
