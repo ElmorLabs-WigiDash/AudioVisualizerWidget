@@ -240,19 +240,6 @@ namespace AudioVisualizerWidget {
             }
             UpdateWidget();
             _audioCapture.Dispose();
-
-            // Scan for changes in audio device
-            /*while (true)
-            {
-                bool result = ScanForDevice();
-                if (result)
-                {
-                    ClearWidget();
-                    pause_drawing = false;
-                    break;
-                }
-                Thread.Sleep(1000);
-            }*/
         }
         
         /// <summary>
@@ -323,6 +310,9 @@ namespace AudioVisualizerWidget {
         {
             int barCount = VisualizerDensity;
             float barWidth = _visualizerSize.Width / (float)barCount;
+
+            if (_fftBuffer.Length <= 0) return;
+
             float[] heightMap = ResampleAverage(_fftBuffer, barCount);
 
             for (int i = 0; i < barCount; i++)
@@ -351,6 +341,9 @@ namespace AudioVisualizerWidget {
         {
             int barCount = VisualizerDensity;
             float barWidth = _visualizerSize.Width / (float)barCount;
+
+            if (_fftBuffer.Length <= 0) return;
+
             float[] heightMap = ResampleAverage(_fftBuffer, barCount);
 
             List<PointF> pointCoords = new List<PointF>();
