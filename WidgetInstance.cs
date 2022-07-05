@@ -5,9 +5,11 @@ using NAudio.Wave;
 using System.Threading;
 using NAudio.CoreAudioApi;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using FrontierWidgetFramework.WidgetUtility;
 using System.Windows.Controls;
+using NAudio.Dsp;
 
 namespace AudioVisualizerWidget {
     public partial class WidgetInstance {
@@ -18,33 +20,34 @@ namespace AudioVisualizerWidget {
         //static extern bool AllocConsole();
 
         // Threading Variables
-        private bool pause_drawing = false;
-        private bool is_drawing = false;
-        private Mutex locking_mutex = new Mutex();
+        private bool _pauseDrawing = false;
+        private bool _isDrawing = false;
+        private readonly Mutex _lockingMutex = new Mutex();
 
         // Variables
         //private bool DEBUG_FLAG = true;
 
-        private WasapiLoopbackCaptureWorkaround audioCapture;
-        private WaveBuffer audioBuffer;
+        private WasapiLoopbackCaptureWorkaround _audioCapture;
+        private WaveBuffer _audioBuffer;
+        private int _byteLength;
 
-        private Size visualizerSize;
-        private Font visualizerFont;
-        private SolidBrush visualizerBrush;
+        private Size _visualizerSize;
+        private Font _visualizerFont;
+        private Color _visualizerBgColor;
+        private Color _visualizerBarColor;
+        private WidgetTheme _globalTheme;
 
-        private int barCount;
-        private float barWidth;
-        private float[] barValues;
-        private Bitmap BitmapCurrent;
-
-        private NAudio.Dsp.Complex[] fftBuffer;
+        private readonly Bitmap _bitmapCurrent;
+        
+        private float[] _fftBuffer;
 
         // User Configurable Variables
-        public GraphType visualizerGraphType;
-        public int visualizerDensity;
-        public int visualizerMultiplier;
-        public Color visualizerBgColor;
-        public Color visualizerBarColor;
+        public GraphType VisualizerGraphType;
+        public int VisualizerDensity;
+        public int VisualizerMultiplier;
+        public bool UseGlobalTheme;
+        public Color UserVisualizerBgColor;
+        public Color UserVisualizerBarColor;
 
         public WidgetInstance(AudioVisualizerWidget parent, WidgetSize widget_size, Guid instance_guid) {
             // Open Console if DEBUG
@@ -56,21 +59,21 @@ namespace AudioVisualizerWidget {
             this.WidgetSize = widget_size;
 
             // Widget Properties
-            visualizerSize = this.WidgetSize.ToSize();
-            BitmapCurrent = new Bitmap(visualizerSize.Width, visualizerSize.Height);
-
-            // UI
-            visualizerFont = new Font("Basic Square 7", 32);
+            _visualizerSize = WidgetSize.ToSize();
+            _bitmapCurrent = new Bitmap(_visualizerSize.Width, _visualizerSize.Height);
 
             // Load Settings from Store
             LoadSettings();
+
+            // Hook to update theme
+            parent.WidgetManager.GlobalThemeUpdated += UpdateSettings;
 
             // Audio Capture
             //ScanForDevice();
 
             // Clear Widget
-            ClearWidget(); 
-            
+            ClearWidget();
+
             Thread task_thread = new Thread(new ThreadStart(TaskThread));
             task_thread.IsBackground = true;
             run_task = true;
@@ -81,11 +84,11 @@ namespace AudioVisualizerWidget {
 
         private void TaskThread() {
             while(run_task) {
-                if(audioCapture == null) {
+                if(_audioCapture == null) {
                     bool result = ScanForDevice();
                     if(result) {
                         ClearWidget();
-                        pause_drawing = false;
+                        _pauseDrawing = false;
                     }
                 }
                 Thread.Sleep(1000);
@@ -97,13 +100,18 @@ namespace AudioVisualizerWidget {
         /// </summary>
         public void UpdateSettings()
         {
-            // Set Brush
-            visualizerBrush = new SolidBrush(visualizerBarColor);
-
-            // Set visualizer variables
-            barCount = (int)((Math.Pow(2, visualizerDensity) / 2) + 1);
-            barValues = new float[barCount];
-            barWidth = visualizerSize.Width / ((float)Math.Pow(2, visualizerDensity) / 2);
+            if (!UseGlobalTheme)
+            {
+                _visualizerFont = new Font("Basic Square 7", 32);
+                _visualizerBarColor = UserVisualizerBarColor;
+                _visualizerBgColor = UserVisualizerBgColor;
+            }
+            else
+            {
+                _visualizerFont = _globalTheme.PrimaryFont;
+                _visualizerBarColor = _globalTheme.PrimaryFgColor;
+                _visualizerBgColor = _globalTheme.PrimaryBgColor;
+            }
         }
 
         /// <summary>
@@ -111,11 +119,12 @@ namespace AudioVisualizerWidget {
         /// </summary>
         public void SaveSettings()
         {
-            parent.WidgetManager.StoreSetting(this, "visualizerGraphType", visualizerGraphType.ToString());
-            parent.WidgetManager.StoreSetting(this, "visualizerDensity", visualizerDensity.ToString());
-            parent.WidgetManager.StoreSetting(this, "visualizerMultiplier", visualizerMultiplier.ToString());
-            parent.WidgetManager.StoreSetting(this, "visualizerBgColor", ColorTranslator.ToHtml(visualizerBgColor));
-            parent.WidgetManager.StoreSetting(this, "visualizerBarColor", ColorTranslator.ToHtml(visualizerBarColor));
+            parent.WidgetManager.StoreSetting(this, "useGlobalTheme", UseGlobalTheme.ToString());
+            parent.WidgetManager.StoreSetting(this, "visualizerGraphType", VisualizerGraphType.ToString());
+            parent.WidgetManager.StoreSetting(this, "visualizerDensity", VisualizerDensity.ToString());
+            parent.WidgetManager.StoreSetting(this, "visualizerMultiplier", VisualizerMultiplier.ToString());
+            parent.WidgetManager.StoreSetting(this, "visualizerBgColor", ColorTranslator.ToHtml(UserVisualizerBgColor));
+            parent.WidgetManager.StoreSetting(this, "visualizerBarColor", ColorTranslator.ToHtml(UserVisualizerBarColor));
         }
 
         /// <summary>
@@ -124,35 +133,34 @@ namespace AudioVisualizerWidget {
         public void LoadSettings()
         {
             // Variable definitions
-            string visualizerGraphTypeStr;
-            string visualizerDensityStr;
-            string visualizerMultiplierStr;
-            string visualizerBgColorStr;
-            string visualizerBarColorStr;
-
-            parent.WidgetManager.LoadSetting(this, "visualizerGraphType", out visualizerGraphTypeStr);
-            parent.WidgetManager.LoadSetting(this, "visualizerDensity", out visualizerDensityStr);
-            parent.WidgetManager.LoadSetting(this, "visualizerMultiplier", out visualizerMultiplierStr);
-            parent.WidgetManager.LoadSetting(this, "visualizerBgColor", out visualizerBgColorStr);
-            parent.WidgetManager.LoadSetting(this, "visualizerBarColor", out visualizerBarColorStr);
+            parent.WidgetManager.LoadSetting(this, "useGlobalTheme", out var useGlobalThemeStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerGraphType", out var visualizerGraphTypeStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerDensity", out var visualizerDensityStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerMultiplier", out var visualizerMultiplierStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerBgColor", out var visualizerBgColorStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerBarColor", out var visualizerBarColorStr);
 
             // Actually parse and set settings
             try
             {
-                if (!string.IsNullOrEmpty(visualizerGraphTypeStr)) Enum.TryParse(visualizerGraphTypeStr, out GraphType visualizerGraphType);
-                else visualizerGraphType = GraphType.BarGraph;
-                if (!string.IsNullOrEmpty(visualizerDensityStr)) int.TryParse(visualizerDensityStr, out visualizerDensity);
-                else visualizerDensity = 5;
-                if (!string.IsNullOrEmpty(visualizerMultiplierStr)) int.TryParse(visualizerMultiplierStr, out visualizerMultiplier);
-                else visualizerMultiplier = 30;
-                if (!string.IsNullOrEmpty(visualizerBgColorStr)) visualizerBgColor = ColorTranslator.FromHtml(visualizerBgColorStr);
-                else visualizerBgColor = Color.FromArgb(0, 32, 63);
-                if (!string.IsNullOrEmpty(visualizerBarColorStr)) visualizerBarColor = ColorTranslator.FromHtml(visualizerBarColorStr);
-                else visualizerBarColor = Color.FromArgb(173, 239, 209);
+                _globalTheme = parent.WidgetManager.GlobalWidgetTheme;
+
+                if (!string.IsNullOrEmpty(useGlobalThemeStr)) bool.TryParse(useGlobalThemeStr, out UseGlobalTheme);
+                else UseGlobalTheme = false;
+                if (!string.IsNullOrEmpty(visualizerGraphTypeStr)) Enum.TryParse(visualizerGraphTypeStr, out VisualizerGraphType);
+                else VisualizerGraphType = GraphType.BarGraph;
+                if (!string.IsNullOrEmpty(visualizerDensityStr)) int.TryParse(visualizerDensityStr, out VisualizerDensity);
+                else VisualizerDensity = 5;
+                if (!string.IsNullOrEmpty(visualizerMultiplierStr)) int.TryParse(visualizerMultiplierStr, out VisualizerMultiplier);
+                else VisualizerMultiplier = 30;
+                if (!string.IsNullOrEmpty(visualizerBgColorStr)) UserVisualizerBgColor = ColorTranslator.FromHtml(visualizerBgColorStr);
+                else UserVisualizerBgColor = Color.FromArgb(0, 32, 63);
+                if (!string.IsNullOrEmpty(visualizerBarColorStr)) UserVisualizerBarColor = ColorTranslator.FromHtml(visualizerBarColorStr);
+                else UserVisualizerBarColor = Color.FromArgb(173, 239, 209);
 
                 UpdateSettings();
                 SaveSettings();
-            } catch (Exception ex)
+            } catch (Exception _)
             {
                 //MessageBox.Show(ex.Message);
             }
@@ -164,7 +172,7 @@ namespace AudioVisualizerWidget {
         /// <returns></returns>
         private bool ScanForDevice()
         {
-            audioCapture = null;
+            _audioCapture = null;
 
             try
             {
@@ -173,13 +181,13 @@ namespace AudioVisualizerWidget {
                 MMDevice mmd = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
 
                 // Set audio capture parameters
-                audioCapture = new WasapiLoopbackCaptureWorkaround();
-                audioCapture.WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(mmd.AudioClient.MixFormat.SampleRate, 2);
-                audioCapture.DataAvailable += DataAvailable;
-                audioCapture.RecordingStopped += (sender, args) => { RecordingStopped(); };
-                audioCapture.StartRecording();
+                _audioCapture = new WasapiLoopbackCaptureWorkaround();
+                //_audioCapture.WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(mmd.AudioClient.MixFormat.SampleRate, 2);
+                _audioCapture.DataAvailable += DataAvailable;
+                _audioCapture.RecordingStopped += (sender, args) => { RecordingStopped(); };
+                _audioCapture.StartRecording();
 
-                return (audioCapture != null);
+                return (_audioCapture != null);
             }
             catch (Exception ex)
             {
@@ -195,8 +203,9 @@ namespace AudioVisualizerWidget {
         /// <param name="e">Arguments of event</param>
         private void DataAvailable(object sender, WaveInEventArgs e)
         {
-            audioBuffer = new WaveBuffer(e.Buffer);
-            DrawWidget(audioBuffer);
+            _audioBuffer = new WaveBuffer(e.Buffer);
+            _byteLength = e.BytesRecorded;
+            DrawWidget();
         }
 
         /// <summary>
@@ -205,14 +214,15 @@ namespace AudioVisualizerWidget {
         /// <param name="ex">Exception</param>
         private void HandleCaptureException(Exception ex)
         {
-            pause_drawing = true;
-            using (Graphics g = Graphics.FromImage(BitmapCurrent))
+            _pauseDrawing = true;
+            using (Graphics g = Graphics.FromImage(_bitmapCurrent))
             {
-                g.Clear(visualizerBgColor);
-                g.DrawString("Unsupported Format..", visualizerFont, visualizerBrush, new Point(0, 0));
+                g.Clear(_visualizerBgColor);
+                SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
+                g.DrawString("Unsupported Format..", _visualizerFont, visualizerBrush, new Point(0, 0));
             }
             UpdateWidget();
-            audioCapture.Dispose();
+            _audioCapture.Dispose();
         }
 
         /// <summary>
@@ -221,14 +231,15 @@ namespace AudioVisualizerWidget {
         private void RecordingStopped()
         {
             // Draw "No Audio Device" message
-            pause_drawing = true;
-            using (Graphics g = Graphics.FromImage(BitmapCurrent))
+            _pauseDrawing = true;
+            using (Graphics g = Graphics.FromImage(_bitmapCurrent))
             {
-                g.Clear(visualizerBgColor);
-                g.DrawString("No Audio Device..", visualizerFont, visualizerBrush, new Point(0, 0));
+                g.Clear(_visualizerBgColor);
+                SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
+                g.DrawString("No Audio Device..", _visualizerFont, visualizerBrush, new Point(0, 0));
             }
             UpdateWidget();
-            audioCapture.Dispose();
+            _audioCapture.Dispose();
 
             // Scan for changes in audio device
             /*while (true)
@@ -249,9 +260,9 @@ namespace AudioVisualizerWidget {
         /// </summary>
         public void ClearWidget()
         {
-            using (Graphics g = Graphics.FromImage(BitmapCurrent))
+            using (Graphics g = Graphics.FromImage(_bitmapCurrent))
             {
-                g.Clear(visualizerBgColor);
+                g.Clear(_visualizerBgColor);
             }
 
             UpdateWidget();
@@ -260,32 +271,31 @@ namespace AudioVisualizerWidget {
         /// <summary>
         /// Main drawing method
         /// </summary>
-        /// <param name="buffer">WaveBuffer to draw graphs from</param>
-        public void DrawWidget(WaveBuffer buffer)
+        public void DrawWidget()
         {
             // Check drawing conditions
-            if (locking_mutex.WaitOne(1000) && !is_drawing && !pause_drawing)
+            if (_lockingMutex.WaitOne(1000) && !_isDrawing && !_pauseDrawing)
             {
-                using (Graphics g = Graphics.FromImage(BitmapCurrent))
+                using (Graphics g = Graphics.FromImage(_bitmapCurrent))
                 {
                     // Set flag
-                    is_drawing = true;
+                    _isDrawing = true;
                     
                     // Check buffer
-                    if (buffer == null)
+                    if (_audioBuffer == null)
                     {
                         RecordingStopped();
                         return;
                     }
 
-                    GetValues(buffer);
+                    GetValues(_audioBuffer, _byteLength);
 
                     g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
                     // Clear board to draw visualizer
-                    g.Clear(visualizerBgColor);
+                    g.Clear(_visualizerBgColor);
 
-                    switch (visualizerGraphType)
+                    switch (VisualizerGraphType)
                     {
                         default:
                         case GraphType.BarGraph:
@@ -300,7 +310,7 @@ namespace AudioVisualizerWidget {
                     // Flush
                     UpdateWidget();
                 }
-                locking_mutex.ReleaseMutex();
+                _lockingMutex.ReleaseMutex();
             }
         }
 
@@ -311,20 +321,24 @@ namespace AudioVisualizerWidget {
         /// <returns></returns>
         private void DrawBarGraph(Graphics g)
         {
-            // For each FFT values, draw a bar
-            for (int i = 1; i < barCount; i++)
-            {
-                float value = -(Math.Abs(fftBuffer[i].X));
-                float barHeight = DrawingHeightCalc(i, value);
+            int barCount = VisualizerDensity;
+            float barWidth = _visualizerSize.Width / (float)barCount;
+            float[] heightMap = ResampleAverage(_fftBuffer, barCount);
 
-                RectangleF visualizerBar = VisualizerBar(
-                    (i - 1) * barWidth,
-                    visualizerSize.Height,
+            for (int i = 0; i < barCount; i++)
+            {
+                float value = -Math.Abs(heightMap[i]);
+                float barHeight = DrawingHeightCalc(value);
+
+                RectangleF bar = VisualizerBar(
+                    i * barWidth,
+                    _visualizerSize.Height,
                     barWidth,
                     barHeight
                 );
 
-                g.FillRectangle(visualizerBrush, visualizerBar);
+                SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
+                g.FillRectangle(visualizerBrush, bar);
             }
         }
 
@@ -335,22 +349,49 @@ namespace AudioVisualizerWidget {
         /// <returns></returns>
         private void DrawLineGraph(Graphics g)
         {
+            int barCount = VisualizerDensity;
+            float barWidth = _visualizerSize.Width / (float)barCount;
+            float[] heightMap = ResampleAverage(_fftBuffer, barCount);
+
             List<PointF> pointCoords = new List<PointF>();
-            float yOrigin = visualizerSize.Height - 5;
+            float yOrigin = _visualizerSize.Height - 5;
             pointCoords.Add(new PointF(0, yOrigin));
-            // For each FFT values, draw a bar
-            for (int i = 1; i < barCount; i++)
+
+            for (int i = 0; i < barCount; i++)
             {
-                float value = -(Math.Abs(fftBuffer[i].X));
-                float pointHeight = yOrigin - Math.Abs(DrawingHeightCalc(i, value));
+                float value = -Math.Abs(heightMap[i]);
+                float pointHeight = yOrigin - Math.Abs(DrawingHeightCalc(value));
 
                 PointF point = new PointF((i - 1) * barWidth + (barWidth / 2), pointHeight);
                 pointCoords.Add(point);
             }
-            pointCoords.Add(new PointF(visualizerSize.Width, yOrigin));
+            pointCoords.Add(new PointF(_visualizerSize.Width, yOrigin));
+            
+            Pen visualizerPen = new Pen(_visualizerBarColor, 3);
+            g.DrawCurve(visualizerPen, pointCoords.ToArray());
+        }
 
-            Pen pen = new Pen(visualizerBarColor, 3);
-            g.DrawCurve(pen, pointCoords.ToArray());
+        public static float[] ResampleAverage(float[] sample, int targetCount)
+        {
+            int divisor = sample.Length / targetCount;
+
+            var reducedSamples = new float[sample.Length / divisor];
+            int reducedIndex = 0;
+            for (int i = 0; i < sample.Length; i += divisor)
+            {
+                float sum = 0;
+                int count = 0;
+                for (int j = 0; j < divisor && (i + j) < sample.Length; j++)
+                {
+                    sum += sample[i + j];
+                    count++;
+                }
+
+                if (reducedSamples.Length <= reducedIndex) continue;
+                reducedSamples[reducedIndex++] = sum / count;
+            }
+
+            return reducedSamples;
         }
 
         /// <summary>
@@ -358,9 +399,50 @@ namespace AudioVisualizerWidget {
         /// </summary>
         /// <param name="buffer">WaveBuffer to draw graphs from</param>
         /// <returns></returns>
-        private void GetValues(WaveBuffer buffer)
+        private void GetValues(WaveBuffer buffer, int byteLength)
         {
-            int len = buffer.FloatBuffer.Length / 8;
+            float[] combinedSample = Enumerable
+                .Range(0, byteLength / 4)
+                .Select(x => BitConverter.ToSingle(buffer, x * 4))
+                .ToArray();
+
+            int channelCount = _audioCapture.WaveFormat.Channels;
+            float[][] channelSamples = Enumerable.Range(0, channelCount).Select(channelSample => Enumerable
+                    .Range(0, combinedSample.Length / 2)
+                    .Select(x => combinedSample[channelSample + x * channelCount])
+                    .ToArray())
+                .ToArray();
+
+            float[] sampleAverage = Enumerable
+                .Range(0, combinedSample.Length / channelCount)
+                .Select(index => Enumerable
+                    .Range(0, channelCount)
+                    .Select(x => channelSamples[x][index])
+                    .Average())
+                .ToArray();
+
+            double logVal = Math.Ceiling(Math.Log(sampleAverage.Length, 2));
+            int lenVal = (int)Math.Pow(2, logVal);
+            float[] sampleBuffer = new float[lenVal];
+
+            Array.Copy(sampleAverage, sampleBuffer, sampleAverage.Length);
+            Complex[] complexSource = sampleBuffer
+                .Select(v => new Complex() { X = v })
+                .ToArray();
+
+            FastFourierTransform.FFT(false, (int)logVal, complexSource);
+
+            Complex[] halvedSample = complexSource
+                .Take(complexSource.Length / 2)
+                .ToArray();
+
+            float[] freqDomainSample = halvedSample
+                .Select(v => (float)Math.Sqrt(v.X * v.X + v.Y * v.Y))
+                .ToArray();
+            
+            _fftBuffer = freqDomainSample;
+
+            /**int len = buffer.FloatBuffer.Length / 8;
 
             fftBuffer = new NAudio.Dsp.Complex[len];
 
@@ -370,7 +452,7 @@ namespace AudioVisualizerWidget {
                 fftBuffer[i].X = buffer.FloatBuffer[i];
             }
 
-            NAudio.Dsp.FastFourierTransform.FFT(true, visualizerDensity, fftBuffer);
+            NAudio.Dsp.FastFourierTransform.FFT(true, visualizerDensity, fftBuffer);**/
         }
 
         /// <summary>
@@ -379,19 +461,10 @@ namespace AudioVisualizerWidget {
         /// <param name="i">The nth place of bar</param>
         /// <param name="value">The FFT value of frequency</param>
         /// <returns></returns>
-        private float DrawingHeightCalc(int i, float value)
+        private float DrawingHeightCalc(float value)
         {
-            if (Math.Abs(barValues[i]) > Math.Abs(value) && fftBuffer != null)
-            {
-                // Decay
-                barValues[i] = -(value * barValues[i]) * (95f / 100f);
-            } else
-            {
-                // Set as normally would
-                barValues[i] = value;
-            }
-
-            float returnVal = barValues[i] * visualizerMultiplier * visualizerSize.Height;
+            float returnVal = value * VisualizerMultiplier;
+            if (returnVal > _visualizerSize.Height) returnVal = _visualizerSize.Height;
             return returnVal;
         }
 
@@ -400,10 +473,10 @@ namespace AudioVisualizerWidget {
         /// </summary>
         private void UpdateWidget() {
             WidgetUpdatedEventArgs e = new WidgetUpdatedEventArgs();
-            e.WidgetBitmap = BitmapCurrent;
+            e.WidgetBitmap = _bitmapCurrent;
             e.WaitMax = 1000;
             WidgetUpdated?.Invoke(this, e);
-            is_drawing = false;
+            _isDrawing = false;
         }
 
         /// <summary>
@@ -437,7 +510,7 @@ namespace AudioVisualizerWidget {
         /// </summary>
         public void RequestUpdate()
         {
-            DrawWidget(audioBuffer);
+            DrawWidget();
         }
 
         public void ClickEvent(ClickType click_type, int x, int y)
@@ -460,24 +533,24 @@ namespace AudioVisualizerWidget {
         }
 
         public void Dispose() {
-            pause_drawing = true;
+            _pauseDrawing = true;
             run_task = false;
-            if(audioCapture != null) {
-                audioCapture.StopRecording();
-                audioCapture.Dispose();
+            if(_audioCapture != null) {
+                _audioCapture.StopRecording();
+                _audioCapture.Dispose();
             }
             Thread.Sleep(50);
-            BitmapCurrent.Dispose();
+            _bitmapCurrent.Dispose();
         }
 
         public void EnterSleep()
         {
-            pause_drawing = true;
+            _pauseDrawing = true;
         }
 
         public void ExitSleep()
         {
-            pause_drawing = false;
+            _pauseDrawing = false;
             UpdateWidget();
         }
 

@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:AudioVisualizerWidget"
              mc:Ignorable="d" 
-             d:DesignHeight="160" d:DesignWidth="225">
+             d:DesignHeight="190" d:DesignWidth="225">
     <StackPanel>
         <Grid Margin="2">
             <Grid.ColumnDefinitions>
@@ -15,6 +15,8 @@
             <Label Content="Graph Type:" FontSize="10"></Label>
             <ComboBox x:Name="graphSelect" Grid.Column="1"></ComboBox>
         </Grid>
+
+        <CheckBox x:Name="globalThemeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="6, 2" Content="Use Global Theme" FontSize="10"></CheckBox>
         
         <Grid Margin="2">
             <Grid.ColumnDefinitions>
@@ -40,7 +42,7 @@
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
             <Label Content="Visualizer Density:" FontSize="10"></Label>
-            <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="0" Maximum="10"></Slider>
+            <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="1" Maximum="200"></Slider>
         </Grid>
 
         <Grid Margin="2">
@@ -49,7 +51,7 @@
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
             <Label Content="Visualizer Multiplier:" FontSize="10"></Label>
-            <Slider x:Name="vmSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="0" Maximum="255"></Slider>
+            <Slider x:Name="vmSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="0" Maximum="100"></Slider>
         </Grid>
 
         <Button Margin="2" Content="Save" Click="SaveButton_Click"></Button>

@@ -21,23 +21,25 @@ namespace AudioVisualizerWidget
         private void OnLoad(object sender, RoutedEventArgs e)
         {
             graphSelect.ItemsSource = Enum.GetValues(typeof(GraphType));
-            graphSelect.SelectedValue = Parent.visualizerGraphType;
+            graphSelect.SelectedValue = Parent.VisualizerGraphType;
 
-            bgColor.Text = ColorTranslator.ToHtml(Parent.visualizerBgColor);
-            fgColor.Text = ColorTranslator.ToHtml(Parent.visualizerBarColor);
-            vdSlider.Value = Parent.visualizerDensity;
-            vmSlider.Value = Parent.visualizerMultiplier;
+            globalThemeCheck.IsChecked = Parent.UseGlobalTheme;
+            bgColor.Text = ColorTranslator.ToHtml(Parent.UserVisualizerBgColor);
+            fgColor.Text = ColorTranslator.ToHtml(Parent.UserVisualizerBarColor);
+            vdSlider.Value = Parent.VisualizerDensity;
+            vmSlider.Value = Parent.VisualizerMultiplier;
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                Parent.visualizerGraphType = (GraphType)graphSelect.SelectedValue;
-                Parent.visualizerBgColor = ColorTranslator.FromHtml(bgColor.Text);
-                Parent.visualizerBarColor = ColorTranslator.FromHtml(fgColor.Text);
-                Parent.visualizerDensity = (int)vdSlider.Value;
-                Parent.visualizerMultiplier = (int)vmSlider.Value;
+                Parent.VisualizerGraphType = (GraphType)graphSelect.SelectedValue;
+                Parent.UseGlobalTheme = globalThemeCheck.IsChecked == true;
+                Parent.UserVisualizerBgColor = ColorTranslator.FromHtml(bgColor.Text);
+                Parent.UserVisualizerBarColor = ColorTranslator.FromHtml(fgColor.Text);
+                Parent.VisualizerDensity = (int)vdSlider.Value;
+                Parent.VisualizerMultiplier = (int)vmSlider.Value;
                 Parent.UpdateSettings();
                 Parent.SaveSettings();
             }
