@@ -1,4 +1,4 @@
-﻿using FrontierWidgetFramework;
+﻿using WigiDashWidgetFramework;
 using System;
 using System.Drawing;
 using NAudio.Wave;
@@ -7,7 +7,7 @@ using NAudio.CoreAudioApi;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using FrontierWidgetFramework.WidgetUtility;
+using WigiDashWidgetFramework.WidgetUtility;
 using System.Windows.Controls;
 using NAudio.Dsp;
 
