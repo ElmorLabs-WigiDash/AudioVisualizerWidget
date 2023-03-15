@@ -100,17 +100,17 @@ namespace AudioVisualizerWidget {
         /// </summary>
         public void UpdateSettings()
         {
-            if (!UseGlobalTheme)
-            {
-                _visualizerFont = new Font("Basic Square 7", 32);
-                _visualizerBarColor = UserVisualizerBarColor;
-                _visualizerBgColor = UserVisualizerBgColor;
-            }
-            else
+            if (UseGlobalTheme || parent.WidgetManager.PreferGlobalTheme)
             {
                 _visualizerFont = _globalTheme.PrimaryFont;
                 _visualizerBarColor = _globalTheme.PrimaryFgColor;
                 _visualizerBgColor = _globalTheme.PrimaryBgColor;
+            }
+            else
+            {
+                _visualizerFont = new Font("Basic Square 7", 32);
+                _visualizerBarColor = UserVisualizerBarColor;
+                _visualizerBgColor = UserVisualizerBgColor;
             }
         }
 
