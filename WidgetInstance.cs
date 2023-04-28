@@ -394,47 +394,47 @@ namespace AudioVisualizerWidget {
         /// <returns></returns>
         private void GetValues(WaveBuffer buffer, int byteLength)
         {
-            // Convert byte buffer to array of floats
-            var sampleData = Enumerable
+            float[] combinedSample = Enumerable
                 .Range(0, byteLength / 4)
                 .Select(x => BitConverter.ToSingle(buffer, x * 4))
                 .ToArray();
 
-            // Split channels into separate arrays
             int channelCount = _audioCapture.WaveFormat.Channels;
-            var channelData = Enumerable.Range(0, channelCount)
-                .Select(channelSample => Enumerable
-                    .Range(0, sampleData.Length / 2)
-                    .Select(x => sampleData[channelSample + x * channelCount])
+            float[][] channelSamples = Enumerable.Range(0, channelCount).Select(channelSample => Enumerable
+                    .Range(0, combinedSample.Length / 2)
+                    .Select(x => combinedSample[channelSample + x * channelCount])
                     .ToArray())
                 .ToArray();
 
-            // Calculate average of samples across channels
-            var sampleAverage = Enumerable
-                .Range(0, sampleData.Length / channelCount)
+            float[] sampleAverage = Enumerable
+                .Range(0, combinedSample.Length / channelCount)
                 .Select(index => Enumerable
                     .Range(0, channelCount)
-                    .Select(x => channelData[x][index])
+                    .Select(x => channelSamples[x][index])
                     .Average())
                 .ToArray();
 
-            // Pad sample buffer with zeros to next power of 2
-            var paddedData = new float[(int)Math.Pow(2, Math.Ceiling(Math.Log(sampleAverage.Length, 2)))];
-            Array.Copy(sampleAverage, paddedData, sampleAverage.Length);
+            double logVal = Math.Ceiling(Math.Log(sampleAverage.Length, 2));
+            int lenVal = (int)Math.Pow(2, logVal);
+            float[] sampleBuffer = new float[lenVal];
 
-            // Apply FFT to sample buffer
-            var complexSource = paddedData.Select(v => new Complex() { X = v}).ToArray();
-            FastFourierTransform.FFT(false, complexSource.Length, complexSource);
+            Array.Copy(sampleAverage, sampleBuffer, sampleAverage.Length);
+            Complex[] complexSource = sampleBuffer
+                .Select(v => new Complex() { X = v })
+                .ToArray();
 
-            // Take first half of FFT (due to symmetry)
-            var halvedSample = complexSource.Take(complexSource.Length / 2).ToArray();
+            FastFourierTransform.FFT(false, (int)logVal, complexSource);
 
-            // Convert to frequency domain (magnitude)
-            var freqDomainSample = halvedSample.Select(v => (float)Math.Sqrt(v.X * v.X + v.Y * v.Y)).ToArray();
+            Complex[] halvedSample = complexSource
+                .Take(complexSource.Length / 2)
+                .ToArray();
 
+            float[] freqDomainSample = halvedSample
+                .Select(v => (float)Math.Sqrt(v.X * v.X + v.Y * v.Y))
+                .ToArray();
+            
             _fftBuffer = freqDomainSample;
         }
-
 
         /// <summary>
         /// Calculate visualizer bar height
