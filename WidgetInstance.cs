@@ -219,7 +219,7 @@ namespace AudioVisualizerWidget {
             {
                 g.Clear(_visualizerBgColor);
                 SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
-                g.DrawString("Unsupported Format..", _visualizerFont, visualizerBrush, new Point(0, 0));
+                g.DrawString("Unsupported Format..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
             }
             UpdateWidget();
             _audioCapture.Dispose();
@@ -236,7 +236,7 @@ namespace AudioVisualizerWidget {
             {
                 g.Clear(_visualizerBgColor);
                 SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
-                g.DrawString("No Audio Device..", _visualizerFont, visualizerBrush, new Point(0, 0));
+                g.DrawString("No Audio Device..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
             }
             UpdateWidget();
             _audioCapture.Dispose();
