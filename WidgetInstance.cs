@@ -364,27 +364,67 @@ namespace AudioVisualizerWidget {
             g.DrawCurve(visualizerPen, pointCoords.ToArray());
         }
 
-        public static float[] ResampleAverage(float[] sample, int targetCount)
+        private float GetPerceivedWeight(float freq)
         {
-            int divisor = sample.Length / targetCount;
+            if (freq < 107) return 0.1f;
+            else if (freq >= 107 && freq < 737) return 0.5f;
+            else if (freq >= 3200 && freq < 6500) return 1.2f;
+            else if (freq >= 6500 && freq < 12194) return 1.8f;
+            else if (freq >= 12194 && freq < 14970) return 2.2f;
+            else return 2.5f;
+        }
 
-            var reducedSamples = new float[sample.Length / divisor];
-            int reducedIndex = 0;
-            for (int i = 0; i < sample.Length; i += divisor)
+        public float[] ResampleAverage(float[] samples, int targetCount, bool usePerceivedScale = true)
+        {
+            // Calculate the sample rate and number of samples
+            int sampleRate = _audioCapture.WaveFormat.SampleRate;
+            int sampleCount = samples.Length;
+
+            // Calculate the number of samples to use per bar
+            float minFreq = 20f;
+            float maxFreq = 20000f;
+            float logMin = (float)Math.Log10(minFreq);
+            float logMax = (float)Math.Log10(maxFreq);
+            float logRange = logMax - logMin;
+            float logStep = logRange / targetCount;
+            int[] sampleCounts = new int[targetCount];
+            float[] barHeights = new float[targetCount];
+            for (int i = 0; i < targetCount; i++)
             {
-                float sum = 0;
-                int count = 0;
-                for (int j = 0; j < divisor && (i + j) < sample.Length; j++)
-                {
-                    sum += sample[i + j];
-                    count++;
-                }
-
-                if (reducedSamples.Length <= reducedIndex) continue;
-                reducedSamples[reducedIndex++] = sum / count;
+                float logFreq = logMin + (i + 0.5f) * logStep;
+                float freq = (float)Math.Pow(10, logFreq);
+                float freqStart = (float)(freq / Math.Pow(2, 0.5f / 2));
+                float freqEnd = (float)(freq * Math.Pow(2, 0.5f / 2));
+                int sampleStart = (int)(freqStart / sampleRate * sampleCount);
+                int sampleEnd = (int)(freqEnd / sampleRate * sampleCount);
+                sampleCounts[i] = sampleEnd - sampleStart + 1;
             }
 
-            return reducedSamples;
+            // Compute the heights for each bar
+            for (int i = 0; i < targetCount; i++)
+            {
+                int sampleStart = 0;
+                for (int j = 0; j < i; j++)
+                {
+                    sampleStart += sampleCounts[j];
+                }
+                int sampleEnd = sampleStart + sampleCounts[i] - 1;
+                float barHeight = 0f;
+                for (int j = sampleStart; j <= sampleEnd; j++)
+                {
+                    float sample = samples[j];
+                    barHeight += sample * sample;
+                }
+                barHeight /= sampleCounts[i];
+                if (usePerceivedScale)
+                {
+                    var freq = (float)Math.Pow(10, logMin + (i + 0.5f) * logStep);
+                    barHeight = (float)Math.Sqrt(barHeight) * GetPerceivedWeight(freq);
+                }
+                barHeights[i] = barHeight;
+            }
+
+            return barHeights;
         }
 
         /// <summary>
