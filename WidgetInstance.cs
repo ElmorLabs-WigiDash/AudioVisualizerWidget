@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using WigiDashWidgetFramework.WidgetUtility;
 using System.Windows.Controls;
 using NAudio.Dsp;
+using System.Threading.Tasks;
 
 namespace AudioVisualizerWidget {
     public partial class WidgetInstance {
@@ -22,7 +23,7 @@ namespace AudioVisualizerWidget {
         // Threading Variables
         private bool _pauseDrawing = false;
         private bool _isDrawing = false;
-        private readonly Mutex _lockingMutex = new Mutex();
+        private readonly Semaphore _bitmapLock = new Semaphore(1, 1);
 
         // Variables
         //private bool DEBUG_FLAG = true;
@@ -184,7 +185,6 @@ namespace AudioVisualizerWidget {
                 _audioCapture = new WasapiLoopbackCaptureWorkaround();
                 //_audioCapture.WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(mmd.AudioClient.MixFormat.SampleRate, 2);
                 _audioCapture.DataAvailable += DataAvailable;
-                _audioCapture.RecordingStopped += (sender, args) => { RecordingStopped(); };
                 _audioCapture.StartRecording();
 
                 return (_audioCapture != null);
@@ -214,32 +214,40 @@ namespace AudioVisualizerWidget {
         /// <param name="ex">Exception</param>
         private void HandleCaptureException(Exception ex)
         {
-            _pauseDrawing = true;
-            using (Graphics g = Graphics.FromImage(_bitmapCurrent))
+            if (_bitmapLock.WaitOne(Timeout.Infinite))
             {
-                g.Clear(_visualizerBgColor);
-                SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
-                g.DrawString("Unsupported Format..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
+                _pauseDrawing = true;
+                using (Graphics g = Graphics.FromImage(_bitmapCurrent))
+                {
+                    g.Clear(_visualizerBgColor);
+                    SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
+                    g.DrawString("Unsupported Format..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
+                }
+                UpdateWidget();
             }
-            UpdateWidget();
-            _audioCapture.Dispose();
         }
 
         /// <summary>
         /// Handles RecordingStopped event
         /// </summary>
-        private void RecordingStopped()
+        private void RecordingStopped(Graphics g)
         {
             // Draw "No Audio Device" message
             _pauseDrawing = true;
-            using (Graphics g = Graphics.FromImage(_bitmapCurrent))
-            {
-                g.Clear(_visualizerBgColor);
-                SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
-                g.DrawString("No Audio Device..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
-            }
+            g.Clear(_visualizerBgColor);
+            SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
+            g.DrawString("No Audio Device..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
             UpdateWidget();
-            _audioCapture.Dispose();
+            _bitmapLock.Release();
+        }
+
+        private void DisposeAudioCapture()
+        {
+            if (_audioCapture != null)
+            {
+                _audioCapture.StopRecording();
+                _audioCapture.Dispose();
+            }
         }
         
         /// <summary>
@@ -247,12 +255,15 @@ namespace AudioVisualizerWidget {
         /// </summary>
         public void ClearWidget()
         {
-            using (Graphics g = Graphics.FromImage(_bitmapCurrent))
+            if (_bitmapLock.WaitOne(Timeout.Infinite))
             {
-                g.Clear(_visualizerBgColor);
-            }
+                using (Graphics g = Graphics.FromImage(_bitmapCurrent))
+                {
+                    g.Clear(_visualizerBgColor);
+                }
 
-            UpdateWidget();
+                UpdateWidget();
+            }
         }
 
         /// <summary>
@@ -261,7 +272,7 @@ namespace AudioVisualizerWidget {
         public void DrawWidget()
         {
             // Check drawing conditions
-            if (_lockingMutex.WaitOne(1000) && !_isDrawing && !_pauseDrawing)
+            if (_bitmapLock.WaitOne(100) && !_isDrawing && !_pauseDrawing)
             {
                 using (Graphics g = Graphics.FromImage(_bitmapCurrent))
                 {
@@ -269,9 +280,9 @@ namespace AudioVisualizerWidget {
                     _isDrawing = true;
                     
                     // Check buffer
-                    if (_audioBuffer == null)
+                    if (_audioBuffer == null || _audioCapture.CaptureState == CaptureState.Stopped)
                     {
-                        RecordingStopped();
+                        RecordingStopped(g);
                         return;
                     }
 
@@ -297,8 +308,8 @@ namespace AudioVisualizerWidget {
                     // Flush
                     UpdateWidget();
                 }
-                _lockingMutex.ReleaseMutex();
             }
+            _bitmapLock.Release();
         }
 
         /// <summary>
@@ -563,12 +574,8 @@ namespace AudioVisualizerWidget {
         public void Dispose() {
             _pauseDrawing = true;
             run_task = false;
-            if(_audioCapture != null) {
-                _audioCapture.StopRecording();
-                _audioCapture.Dispose();
-            }
-            Thread.Sleep(50);
             _bitmapCurrent.Dispose();
+            DisposeAudioCapture();
         }
 
         public void EnterSleep()
