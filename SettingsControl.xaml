@@ -42,7 +42,7 @@
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
             <Label Content="Visualizer Density:" FontSize="10"></Label>
-            <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="1" Maximum="45"></Slider>
+            <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="1" Maximum="40"></Slider>
         </Grid>
 
         <Grid Margin="2">
@@ -51,7 +51,7 @@
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
             <Label Content="Visualizer Multiplier:" FontSize="10"></Label>
-            <Slider x:Name="vmSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="0" Maximum="10"></Slider>
+            <Slider x:Name="vmSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="0.01" Maximum="3" TickFrequency="0.01"></Slider>
         </Grid>
 
         <Button Margin="2" Content="Save" Click="SaveButton_Click"></Button>

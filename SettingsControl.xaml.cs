@@ -39,7 +39,7 @@ namespace AudioVisualizerWidget
                 Parent.UserVisualizerBgColor = ColorTranslator.FromHtml(bgColor.Text);
                 Parent.UserVisualizerBarColor = ColorTranslator.FromHtml(fgColor.Text);
                 Parent.VisualizerDensity = (int)vdSlider.Value;
-                Parent.VisualizerMultiplier = (int)vmSlider.Value;
+                Parent.VisualizerMultiplier = (float)vmSlider.Value;
                 Parent.UpdateSettings();
                 Parent.SaveSettings();
             }

@@ -44,7 +44,7 @@ namespace AudioVisualizerWidget {
         // User Configurable Variables
         public GraphType VisualizerGraphType;
         public int VisualizerDensity;
-        public int VisualizerMultiplier;
+        public float VisualizerMultiplier;
         public bool UseGlobalTheme;
         public Color UserVisualizerBgColor;
         public Color UserVisualizerBarColor;
@@ -150,9 +150,9 @@ namespace AudioVisualizerWidget {
                 if (!string.IsNullOrEmpty(visualizerGraphTypeStr)) Enum.TryParse(visualizerGraphTypeStr, out VisualizerGraphType);
                 else VisualizerGraphType = GraphType.BarGraph;
                 if (!string.IsNullOrEmpty(visualizerDensityStr)) int.TryParse(visualizerDensityStr, out VisualizerDensity);
-                else VisualizerDensity = 5;
-                if (!string.IsNullOrEmpty(visualizerMultiplierStr)) int.TryParse(visualizerMultiplierStr, out VisualizerMultiplier);
-                else VisualizerMultiplier = 30;
+                else VisualizerDensity = 25;
+                if (!string.IsNullOrEmpty(visualizerMultiplierStr)) float.TryParse(visualizerMultiplierStr, out VisualizerMultiplier);
+                else VisualizerMultiplier = 0.25f;
                 if (!string.IsNullOrEmpty(visualizerBgColorStr)) UserVisualizerBgColor = ColorTranslator.FromHtml(visualizerBgColorStr);
                 else UserVisualizerBgColor = Color.FromArgb(0, 32, 63);
                 if (!string.IsNullOrEmpty(visualizerBarColorStr)) UserVisualizerBarColor = ColorTranslator.FromHtml(visualizerBarColorStr);
@@ -364,16 +364,6 @@ namespace AudioVisualizerWidget {
             g.DrawCurve(visualizerPen, pointCoords.ToArray());
         }
 
-        private float GetPerceivedWeight(float freq)
-        {
-            if (freq < 107) return 0.1f;
-            else if (freq >= 107 && freq < 737) return 0.5f;
-            else if (freq >= 3200 && freq < 6500) return 1.2f;
-            else if (freq >= 6500 && freq < 12194) return 1.8f;
-            else if (freq >= 12194 && freq < 14970) return 2.2f;
-            else return 2.5f;
-        }
-
         public float[] ResampleAverage(float[] samples, int targetCount, bool usePerceivedScale = true)
         {
             // Calculate the sample rate and number of samples
@@ -400,6 +390,14 @@ namespace AudioVisualizerWidget {
                 sampleCounts[i] = sampleEnd - sampleStart + 1;
             }
 
+            // Apply weighting function to frequency domain sample
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float freq = (float)i / sampleCount * 44100;
+                float weight = usePerceivedScale ? GetPerceivedWeight(freq) : 1f;
+                samples[i] *= weight;
+            }
+
             // Compute the heights for each bar
             for (int i = 0; i < targetCount; i++)
             {
@@ -416,15 +414,24 @@ namespace AudioVisualizerWidget {
                     barHeight += sample * sample;
                 }
                 barHeight /= sampleCounts[i];
-                if (usePerceivedScale)
-                {
-                    var freq = (float)Math.Pow(10, logMin + (i + 0.5f) * logStep);
-                    barHeight = (float)Math.Sqrt(barHeight) * GetPerceivedWeight(freq);
-                }
+
                 barHeights[i] = barHeight;
             }
-
+            
             return barHeights;
+        }
+
+        private float GetPerceivedWeight(float freq)
+        {
+            float a = 1.67332f;
+            float b = -0.080928f;
+            float c = 0.025436f;
+            float d = -0.00015783f;
+            float e = 0.000000282186f;
+            float f = -0.000000000194202f;
+            float frequency = Math.Max(1, freq);
+            float weight = (float)(a + b * Math.Log10(frequency) + c * Math.Pow(Math.Log10(frequency), 2) + d * Math.Pow(Math.Log10(frequency), 3) + e * Math.Pow(Math.Log10(frequency), 4) + f * Math.Pow(Math.Log10(frequency), 5));
+            return weight;
         }
 
         /// <summary>
