@@ -20,7 +20,7 @@ namespace AudioVisualizerWidget {
         }
         public string Description {
             get {
-                return "An audio visualizer widget for the Frontier";
+                return "An audio visualizer widget";
             }
         }
         public string Author {
