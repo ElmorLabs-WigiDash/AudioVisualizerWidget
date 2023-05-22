@@ -243,11 +243,14 @@ namespace AudioVisualizerWidget {
 
         private void DisposeAudioCapture()
         {
-            if (_audioCapture != null)
+            try
             {
-                _audioCapture.StopRecording();
-                _audioCapture.Dispose();
-            }
+                if (_audioCapture != null)
+                {
+                    _audioCapture?.StopRecording();
+                    _audioCapture?.Dispose();
+                }
+            } catch { }
         }
         
         /// <summary>
