@@ -23,7 +23,8 @@ namespace AudioVisualizerWidget {
         // Threading Variables
         private bool _pauseDrawing = false;
         private bool _isDrawing = false;
-        private readonly Semaphore _bitmapLock = new Semaphore(1, 1);
+        private readonly Mutex _bitmapLock = new Mutex();
+        private const int mutex_timeout = 100;
 
         // Variables
         //private bool DEBUG_FLAG = true;
@@ -214,7 +215,7 @@ namespace AudioVisualizerWidget {
         /// <param name="ex">Exception</param>
         private void HandleCaptureException(Exception ex)
         {
-            if (_bitmapLock.WaitOne(Timeout.Infinite))
+            if (_bitmapLock.WaitOne(mutex_timeout))
             {
                 _pauseDrawing = true;
                 using (Graphics g = Graphics.FromImage(_bitmapCurrent))
@@ -223,8 +224,10 @@ namespace AudioVisualizerWidget {
                     SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
                     g.DrawString("Unsupported Format..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
                 }
-                UpdateWidget();
+
+                _bitmapLock.ReleaseMutex();
             }
+            UpdateWidget();
         }
 
         /// <summary>
@@ -232,13 +235,17 @@ namespace AudioVisualizerWidget {
         /// </summary>
         private void RecordingStopped(Graphics g)
         {
-            // Draw "No Audio Device" message
-            _pauseDrawing = true;
-            g.Clear(_visualizerBgColor);
-            SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
-            g.DrawString("No Audio Device..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
+            if (_bitmapLock.WaitOne(mutex_timeout))
+            {
+                // Draw "No Audio Device" message
+                _pauseDrawing = true;
+                g.Clear(_visualizerBgColor);
+                SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
+                g.DrawString("No Audio Device..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
+                
+                _bitmapLock.ReleaseMutex();
+            }
             UpdateWidget();
-            _bitmapLock.Release();
         }
 
         private void DisposeAudioCapture()
@@ -258,15 +265,16 @@ namespace AudioVisualizerWidget {
         /// </summary>
         public void ClearWidget()
         {
-            if (_bitmapLock.WaitOne(Timeout.Infinite))
+            if (_bitmapLock.WaitOne(mutex_timeout))
             {
                 using (Graphics g = Graphics.FromImage(_bitmapCurrent))
                 {
                     g.Clear(_visualizerBgColor);
                 }
 
-                UpdateWidget();
+                _bitmapLock.ReleaseMutex();
             }
+            UpdateWidget();
         }
 
         /// <summary>
@@ -275,7 +283,7 @@ namespace AudioVisualizerWidget {
         public void DrawWidget()
         {
             // Check drawing conditions
-            if (_bitmapLock.WaitOne(100) && !_isDrawing && !_pauseDrawing)
+            if (_bitmapLock.WaitOne(mutex_timeout) && !_isDrawing && !_pauseDrawing)
             {
                 using (Graphics g = Graphics.FromImage(_bitmapCurrent))
                 {
@@ -307,12 +315,13 @@ namespace AudioVisualizerWidget {
                             DrawLineGraph(g);
                             break;
                     }
-
-                    // Flush
-                    UpdateWidget();
                 }
+
+                _bitmapLock.ReleaseMutex();
             }
-            _bitmapLock.Release();
+
+            // Flush
+            UpdateWidget();
         }
 
         /// <summary>
@@ -514,11 +523,16 @@ namespace AudioVisualizerWidget {
         /// Flushes the buffer bitmap to widget
         /// </summary>
         private void UpdateWidget() {
-            WidgetUpdatedEventArgs e = new WidgetUpdatedEventArgs();
-            e.WidgetBitmap = _bitmapCurrent;
-            e.WaitMax = 1000;
-            WidgetUpdated?.Invoke(this, e);
-            _isDrawing = false;
+            if (_bitmapLock.WaitOne(mutex_timeout))
+            {
+                WidgetUpdatedEventArgs e = new WidgetUpdatedEventArgs();
+                e.WidgetBitmap = _bitmapCurrent;
+                e.WaitMax = 1000;
+                WidgetUpdated?.Invoke(this, e);
+                _isDrawing = false;
+
+                _bitmapLock.ReleaseMutex(); 
+            }
         }
 
         /// <summary>
