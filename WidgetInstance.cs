@@ -235,17 +235,11 @@ namespace AudioVisualizerWidget {
         /// </summary>
         private void RecordingStopped(Graphics g)
         {
-            if (_bitmapLock.WaitOne(mutex_timeout))
-            {
-                // Draw "No Audio Device" message
-                _pauseDrawing = true;
-                g.Clear(_visualizerBgColor);
-                SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
-                g.DrawString("No Audio Device..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
-                
-                _bitmapLock.ReleaseMutex();
-            }
-            UpdateWidget();
+            // Draw "No Audio Device" message
+            _pauseDrawing = true;
+            g.Clear(_visualizerBgColor);
+            SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
+            g.DrawString("No Audio Device..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
         }
 
         private void DisposeAudioCapture()
@@ -283,41 +277,44 @@ namespace AudioVisualizerWidget {
         public void DrawWidget()
         {
             // Check drawing conditions
-            if (_bitmapLock.WaitOne(mutex_timeout) && !_isDrawing && !_pauseDrawing)
+            if (!_isDrawing && !_pauseDrawing)
             {
-                using (Graphics g = Graphics.FromImage(_bitmapCurrent))
+                if (_bitmapLock.WaitOne(mutex_timeout))
                 {
-                    // Set flag
-                    _isDrawing = true;
-                    
-                    // Check buffer
-                    if (_audioBuffer == null || _audioCapture.CaptureState == CaptureState.Stopped)
+                    using (Graphics g = Graphics.FromImage(_bitmapCurrent))
                     {
-                        RecordingStopped(g);
-                        return;
+                        // Set flag
+                        _isDrawing = true;
+
+                        // Check buffer
+                        if (_audioBuffer == null || _audioCapture.CaptureState == CaptureState.Stopped)
+                        {
+                            RecordingStopped(g);
+                        } else
+                        {
+                            GetValues(_audioBuffer, _byteLength);
+
+                            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                            // Clear board to draw visualizer
+                            g.Clear(_visualizerBgColor);
+
+                            switch (VisualizerGraphType)
+                            {
+                                default:
+                                case GraphType.BarGraph:
+                                    DrawBarGraph(g);
+                                    break;
+
+                                case GraphType.LineGraph:
+                                    DrawLineGraph(g);
+                                    break;
+                            }
+                        }
                     }
 
-                    GetValues(_audioBuffer, _byteLength);
-
-                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-                    // Clear board to draw visualizer
-                    g.Clear(_visualizerBgColor);
-
-                    switch (VisualizerGraphType)
-                    {
-                        default:
-                        case GraphType.BarGraph:
-                            DrawBarGraph(g);
-                            break;
-
-                        case GraphType.LineGraph:
-                            DrawLineGraph(g);
-                            break;
-                    }
+                    _bitmapLock.ReleaseMutex();
                 }
-
-                _bitmapLock.ReleaseMutex();
             }
 
             // Flush
