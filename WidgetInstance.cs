@@ -249,7 +249,7 @@ namespace AudioVisualizerWidget {
                 if (_audioCapture != null)
                 {
                     _audioCapture?.StopRecording();
-                    _audioCapture?.Dispose();
+                    //_audioCapture?.Dispose();
                 }
             } catch { }
         }
