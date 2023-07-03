@@ -600,7 +600,6 @@ namespace AudioVisualizerWidget {
         public void ExitSleep()
         {
             _pauseDrawing = false;
-            UpdateWidget();
         }
 
         public UserControl GetSettingsControl()
