@@ -22,10 +22,5 @@ namespace AudioVisualizerWidget {
 
         // Events
         public event WidgetUpdatedEventHandler WidgetUpdated;
-
-        public void Dispose()
-        {
-            
-        }
     }
 }

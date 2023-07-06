@@ -442,11 +442,20 @@ namespace AudioVisualizerWidget
         public void EnterSleep()
         {
             _pauseDrawing = true;
+            _audioDeviceHandler.Stop();
         }
 
         public void ExitSleep()
         {
             _pauseDrawing = false;
+            _audioDeviceHandler.Start();
+        }
+
+        public void Dispose()
+        {
+            run_task = false;
+            _pauseDrawing = true;
+            _audioDeviceHandler?.Dispose();
         }
 
         public UserControl GetSettingsControl()

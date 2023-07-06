@@ -58,12 +58,12 @@ namespace AudioVisualizerWidget
 
         public void Start()
         {
-            _capture.StartRecording();
+            if (_capture.CaptureState != CaptureState.Capturing && _capture.CaptureState != CaptureState.Starting) _capture.StartRecording();
         }
 
         public void Stop()
         {
-            _capture.StopRecording();
+            if (_capture.CaptureState == CaptureState.Capturing) _capture.StopRecording();
         }
 
         private void ProcessData()
@@ -114,7 +114,7 @@ namespace AudioVisualizerWidget
             {
                 Stop();
             }
-            _cts.Cancel();
+            try { _cts.Cancel(); } catch { }
             _cts.Dispose();
 
         }
