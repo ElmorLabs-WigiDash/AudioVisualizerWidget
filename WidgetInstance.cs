@@ -307,7 +307,7 @@ namespace AudioVisualizerWidget
                             case GraphType.BarGraph:
                                 var bars = plt.AddBar(plotData.Item2, _visualizerBarColor);
                                 bars.BorderLineWidth = 0;
-                                bars.BarWidth = 1.2;
+                                bars.BarWidth = 1.01;
                                 break;
 
                             case GraphType.LineGraph:
