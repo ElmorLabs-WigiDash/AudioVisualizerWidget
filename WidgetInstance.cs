@@ -11,9 +11,13 @@ using WigiDashWidgetFramework.WidgetUtility;
 using System.Windows.Controls;
 using NAudio.Dsp;
 using System.Threading.Tasks;
+using ScottPlot;
+using MathNet.Numerics.Interpolation;
 
-namespace AudioVisualizerWidget {
-    public partial class WidgetInstance {
+namespace AudioVisualizerWidget
+{
+    public partial class WidgetInstance
+    {
 
         // Allow console for easier debug
         //[DllImport("kernel32.dll", SetLastError = true)]
@@ -25,13 +29,10 @@ namespace AudioVisualizerWidget {
         private bool _isDrawing = false;
         private readonly Mutex _bitmapLock = new Mutex();
         private const int mutex_timeout = 100;
+        private volatile bool run_task;
 
         // Variables
         //private bool DEBUG_FLAG = true;
-
-        private WasapiLoopbackCaptureWorkaround _audioCapture;
-        private WaveBuffer _audioBuffer;
-        private int _byteLength;
 
         private Size _visualizerSize;
         private Font _visualizerFont;
@@ -40,18 +41,25 @@ namespace AudioVisualizerWidget {
         private WidgetTheme _globalTheme;
 
         private readonly Bitmap _bitmapCurrent;
-        
-        private float[] _fftBuffer;
 
         // User Configurable Variables
         public GraphType VisualizerGraphType;
         public int VisualizerDensity;
-        public float VisualizerMultiplier;
+        public bool VisualizerNormalize;
+        public bool VisualizerShowGrid;
+        public bool VisualizerShowAxis;
         public bool UseGlobalTheme;
         public Color UserVisualizerBgColor;
         public Color UserVisualizerBarColor;
 
-        public WidgetInstance(AudioVisualizerWidget parent, WidgetSize widget_size, Guid instance_guid) {
+        private readonly AudioDeviceSource _audioDeviceSource = new AudioDeviceSource();
+        private AudioDeviceHandler _audioDeviceHandler;
+        private AudioDataAnalyzer _audioDataAnalyzer;
+
+        private Dictionary<int, double> _frequencyDataSeries = new Dictionary<int, double>();
+
+        public WidgetInstance(AudioVisualizerWidget parent, WidgetSize widget_size, Guid instance_guid)
+        {
             // Open Console if DEBUG
             //if (DEBUG_FLAG) AllocConsole();
 
@@ -76,25 +84,22 @@ namespace AudioVisualizerWidget {
             // Clear Widget
             ClearWidget();
 
-            Thread task_thread = new Thread(new ThreadStart(TaskThread));
-            task_thread.IsBackground = true;
+            // Hook to default device
+            HandleInputDeviceChange(FindDefaultDevice());
+
+            // Start Drawing every 100ms
             run_task = true;
-            task_thread.Start();
-        }
-
-        private volatile bool run_task;
-
-        private void TaskThread() {
-            while(run_task) {
-                if(_audioCapture == null) {
-                    bool result = ScanForDevice();
-                    if(result) {
-                        ClearWidget();
-                        _pauseDrawing = false;
+            Task.Run(() =>
+            {
+                while (run_task)
+                {
+                    if (!_pauseDrawing)
+                    {
+                        DrawWidget();
                     }
+                    Thread.Sleep(100);
                 }
-                Thread.Sleep(1000);
-            }
+            });
         }
 
         /// <summary>
@@ -123,8 +128,9 @@ namespace AudioVisualizerWidget {
         {
             parent.WidgetManager.StoreSetting(this, "useGlobalTheme", UseGlobalTheme.ToString());
             parent.WidgetManager.StoreSetting(this, "visualizerGraphType", VisualizerGraphType.ToString());
+            parent.WidgetManager.StoreSetting(this, "visualizerShowGrid", VisualizerShowGrid.ToString());
+            parent.WidgetManager.StoreSetting(this, "visualizerShowAxis", VisualizerShowAxis.ToString());
             parent.WidgetManager.StoreSetting(this, "visualizerDensity", VisualizerDensity.ToString());
-            parent.WidgetManager.StoreSetting(this, "visualizerMultiplier", VisualizerMultiplier.ToString());
             parent.WidgetManager.StoreSetting(this, "visualizerBgColor", ColorTranslator.ToHtml(UserVisualizerBgColor));
             parent.WidgetManager.StoreSetting(this, "visualizerBarColor", ColorTranslator.ToHtml(UserVisualizerBarColor));
         }
@@ -137,6 +143,8 @@ namespace AudioVisualizerWidget {
             // Variable definitions
             parent.WidgetManager.LoadSetting(this, "useGlobalTheme", out var useGlobalThemeStr);
             parent.WidgetManager.LoadSetting(this, "visualizerGraphType", out var visualizerGraphTypeStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerShowGrid", out var visualizerShowGridStr);
+            parent.WidgetManager.LoadSetting(this, "visualizerShowAxis", out var visualizerShowAxisStr);
             parent.WidgetManager.LoadSetting(this, "visualizerDensity", out var visualizerDensityStr);
             parent.WidgetManager.LoadSetting(this, "visualizerMultiplier", out var visualizerMultiplierStr);
             parent.WidgetManager.LoadSetting(this, "visualizerBgColor", out var visualizerBgColorStr);
@@ -151,10 +159,12 @@ namespace AudioVisualizerWidget {
                 else UseGlobalTheme = false;
                 if (!string.IsNullOrEmpty(visualizerGraphTypeStr)) Enum.TryParse(visualizerGraphTypeStr, out VisualizerGraphType);
                 else VisualizerGraphType = GraphType.BarGraph;
+                if (!string.IsNullOrEmpty(visualizerShowGridStr)) bool.TryParse(visualizerShowGridStr, out VisualizerShowGrid);
+                else VisualizerShowGrid = false;
+                if (!string.IsNullOrEmpty(visualizerShowAxisStr)) bool.TryParse(visualizerShowAxisStr, out VisualizerShowAxis);
+                else VisualizerShowAxis = false;
                 if (!string.IsNullOrEmpty(visualizerDensityStr)) int.TryParse(visualizerDensityStr, out VisualizerDensity);
-                else VisualizerDensity = 25;
-                if (!string.IsNullOrEmpty(visualizerMultiplierStr)) float.TryParse(visualizerMultiplierStr, out VisualizerMultiplier);
-                else VisualizerMultiplier = 0.25f;
+                else VisualizerDensity = 50;
                 if (!string.IsNullOrEmpty(visualizerBgColorStr)) UserVisualizerBgColor = ColorTranslator.FromHtml(visualizerBgColorStr);
                 else UserVisualizerBgColor = Color.FromArgb(0, 32, 63);
                 if (!string.IsNullOrEmpty(visualizerBarColorStr)) UserVisualizerBarColor = ColorTranslator.FromHtml(visualizerBarColorStr);
@@ -162,98 +172,70 @@ namespace AudioVisualizerWidget {
 
                 UpdateSettings();
                 SaveSettings();
-            } catch (Exception _)
+            }
+            catch (Exception _)
             {
                 //MessageBox.Show(ex.Message);
             }
         }
 
-        /// <summary>
-        /// Scans for devices for the wasapi to hook into
-        /// </summary>
-        /// <returns></returns>
-        private bool ScanForDevice()
+        private string FindDefaultDevice()
         {
-            _audioCapture = null;
+            string deviceId = _audioDeviceSource.DefaultDevice;
 
-            try
+            if (deviceId == null)
             {
-                // Get multimedia assigned audio devices
-                MMDeviceEnumerator enumerator = new MMDeviceEnumerator();
-                MMDevice mmd = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-
-                // Set audio capture parameters
-                _audioCapture = new WasapiLoopbackCaptureWorkaround();
-                //_audioCapture.WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(mmd.AudioClient.MixFormat.SampleRate, 2);
-                _audioCapture.DataAvailable += DataAvailable;
-                _audioCapture.StartRecording();
-
-                return (_audioCapture != null);
+                deviceId = _audioDeviceSource.Devices.FirstOrDefault()?.ID;
             }
-            catch (Exception ex)
+
+            return deviceId;
+        }
+
+        private void HandleInputDeviceChange(string newId)
+        {
+            _audioDeviceHandler?.Dispose();
+            _audioDeviceHandler = null;
+
+            if (_audioDataAnalyzer != null)
             {
-                HandleCaptureException(ex);
-                return false;
+                _audioDataAnalyzer.Update -= Update;
+                _audioDataAnalyzer = null;
+            }
+
+            if (newId == null)
+            {
+                newId = FindDefaultDevice();
+                return;
+            }
+
+            _audioDeviceHandler = _audioDeviceSource.CreateHandlder(newId);
+            _audioDataAnalyzer = new AudioDataAnalyzer(_audioDeviceHandler);
+            _audioDataAnalyzer.Update += Update;
+            InitDataStorage(_audioDataAnalyzer, _audioDeviceHandler);
+            _audioDeviceHandler.Start();
+        }
+
+        private void InitDataStorage(AudioDataAnalyzer analyzer, AudioDeviceHandler handler)
+        {
+            _frequencyDataSeries = new Dictionary<int, double>(analyzer.FftDataPoints);
+            _frequencyDataSeries.Append(analyzer.FftIndices, analyzer.DbValues);
+        }
+
+        // For event hook
+        private void Update(object sender, EventArgs e)
+        {
+            Update((AudioDataAnalyzer)sender);
+        }
+
+        private void Update(AudioDataAnalyzer analyzer)
+        {
+            lock (_frequencyDataSeries)
+            {
+                _frequencyDataSeries.Clear();
+                _frequencyDataSeries.Append(analyzer.FftIndices, analyzer.DbValues);
             }
         }
 
-        /// <summary>
-        /// Handles DataAvailable event
-        /// </summary>
-        /// <param name="sender">The sender of event</param>
-        /// <param name="e">Arguments of event</param>
-        private void DataAvailable(object sender, WaveInEventArgs e)
-        {
-            _audioBuffer = new WaveBuffer(e.Buffer);
-            _byteLength = e.BytesRecorded;
-            DrawWidget();
-        }
-
-        /// <summary>
-        /// Handles audio capture exception
-        /// </summary>
-        /// <param name="ex">Exception</param>
-        private void HandleCaptureException(Exception ex)
-        {
-            if (_bitmapLock.WaitOne(mutex_timeout))
-            {
-                _pauseDrawing = true;
-                using (Graphics g = Graphics.FromImage(_bitmapCurrent))
-                {
-                    g.Clear(_visualizerBgColor);
-                    SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
-                    g.DrawString("Unsupported Format..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
-                }
-
-                _bitmapLock.ReleaseMutex();
-            }
-            UpdateWidget();
-        }
-
-        /// <summary>
-        /// Handles RecordingStopped event
-        /// </summary>
-        private void RecordingStopped(Graphics g)
-        {
-            // Draw "No Audio Device" message
-            _pauseDrawing = true;
-            g.Clear(_visualizerBgColor);
-            SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
-            g.DrawString("No Audio Device..", _visualizerFont, visualizerBrush, new Rectangle(0, 0, WidgetSize.Width, WidgetSize.Height));
-        }
-
-        private void DisposeAudioCapture()
-        {
-            try
-            {
-                if (_audioCapture != null)
-                {
-                    _audioCapture?.StopRecording();
-                    //_audioCapture?.Dispose();
-                }
-            } catch { }
-        }
-        
         /// <summary>
         /// Clears widget
         /// </summary>
@@ -276,7 +258,14 @@ namespace AudioVisualizerWidget {
         /// </summary>
         public void DrawWidget()
         {
-            // Check drawing conditions
+            // Don't draw if no data
+            if (_bitmapCurrent == null || _frequencyDataSeries.Count <= 0)
+            {
+                ClearWidget();
+                return;
+            }
+
+            // Check drawing conditions and frequency data values
             if (!_isDrawing && !_pauseDrawing)
             {
                 if (_bitmapLock.WaitOne(mutex_timeout))
@@ -286,276 +275,141 @@ namespace AudioVisualizerWidget {
                         // Set flag
                         _isDrawing = true;
 
-                        // Check buffer
-                        if (_audioBuffer == null || _audioCapture.CaptureState == CaptureState.Stopped)
-                        {
-                            RecordingStopped(g);
-                        } else
-                        {
-                            GetValues(_audioBuffer, _byteLength);
+                        // Set smoothing mode
+                        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-                            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-                            // Clear board to draw visualizer
-                            g.Clear(_visualizerBgColor);
-
-                            switch (VisualizerGraphType)
-                            {
-                                default:
-                                case GraphType.BarGraph:
-                                    DrawBarGraph(g);
-                                    break;
-
-                                case GraphType.LineGraph:
-                                    DrawLineGraph(g);
-                                    break;
-                            }
-                        }
+                        // Clear board to draw visualizer
+                        g.Clear(_visualizerBgColor);
                     }
 
+                    lock (_frequencyDataSeries)
+                    {
+                        // If _frequencyDataSeries has Infinity or NaN values, set them to 0
+                        foreach (var key in _frequencyDataSeries.Keys.ToList())
+                        {
+                            if (double.IsInfinity(_frequencyDataSeries[key]) || double.IsNaN(_frequencyDataSeries[key]))
+                            {
+                                _frequencyDataSeries[key] = 0;
+                            }
+                        }
+
+                        // Draw graph in log10 scale between 20Hz and 25kHz. Y axis is from -200 to 0.
+                        var plt = new Plot(WidgetSize.ToSize().Width, WidgetSize.ToSize().Height);
+
+                        var xAxisData = Tools.Log10(_frequencyDataSeries.Keys.Select(i => (double)i).ToArray());
+                        var yAxisData = _frequencyDataSeries.Values.Select(d => d + 200 > 190 ? 0 : d + 200).ToArray();
+
+                        var plotData = GetInterpolatedData(xAxisData, yAxisData, VisualizerDensity);
+
+                        switch (VisualizerGraphType)
+                        {
+                            default:
+                            case GraphType.BarGraph:
+                                var bars = plt.AddBar(plotData.Item2, _visualizerBarColor);
+                                bars.BorderLineWidth = 0;
+                                bars.BarWidth = 1.2;
+                                break;
+
+                            case GraphType.LineGraph:
+                                plt.AddScatter(plotData.Item1, plotData.Item2, _visualizerBarColor, markerShape: MarkerShape.none, lineWidth: 2);
+                                break;
+                        }
+
+                        plt.Style(dataBackground: _visualizerBgColor, figureBackground: _visualizerBgColor);
+
+                        plt.SetAxisLimitsY(0, 200);
+
+                        if (VisualizerNormalize)
+                        {
+                            plt.AxisAuto(0, 0);
+                        } else
+                        {
+                            plt.AxisAutoX(0);
+                        }
+
+                        plt.XAxis.Color(_visualizerBarColor);
+                        plt.XAxis2.Color(_visualizerBarColor);
+                        plt.YAxis.Color(_visualizerBarColor);
+                        plt.YAxis2.Color(_visualizerBarColor);
+                        plt.Grid(VisualizerShowGrid);
+
+                        plt.Frameless(!VisualizerShowAxis);
+
+                        plt.Render(_bitmapCurrent);
+                    }
+
+                    // Clear drawing flag
+                    _isDrawing = false;
+                    // Release bitmap lock
                     _bitmapLock.ReleaseMutex();
                 }
-            }
 
-            // Flush
-            UpdateWidget();
-        }
-
-        /// <summary>
-        /// Draw wavebuffer to a bar graph
-        /// </summary>
-        /// <param name="g">Graphics to draw bar to</param>
-        /// <returns></returns>
-        private void DrawBarGraph(Graphics g)
-        {
-            int barCount = VisualizerDensity;
-            float barWidth = _visualizerSize.Width / (float)barCount;
-
-            if (_fftBuffer.Length <= 0) return;
-
-            float[] heightMap = ResampleAverage(_fftBuffer, barCount);
-
-            for (int i = 0; i < barCount; i++)
-            {
-                float value = -Math.Abs(heightMap[i]);
-                float barHeight = DrawingHeightCalc(value);
-
-                RectangleF bar = VisualizerBar(
-                    i * barWidth,
-                    _visualizerSize.Height,
-                    barWidth,
-                    barHeight
-                );
-
-                SolidBrush visualizerBrush = new SolidBrush(_visualizerBarColor);
-                g.FillRectangle(visualizerBrush, bar);
+                // Flush
+                UpdateWidget();
             }
         }
 
-        /// <summary>
-        /// Draw wavebuffer to a line graph
-        /// </summary>
-        /// <param name="g">Graphics to draw bar to</param>
-        /// <returns></returns>
-        private void DrawLineGraph(Graphics g)
+        private (double[], double[]) GetInterpolatedData(double[] xData, double[] yData, int numPoints)
         {
-            int barCount = VisualizerDensity;
-            float barWidth = _visualizerSize.Width / (float)barCount;
-
-            if (_fftBuffer.Length <= 0) return;
-
-            float[] heightMap = ResampleAverage(_fftBuffer, barCount);
-
-            List<PointF> pointCoords = new List<PointF>();
-            float yOrigin = _visualizerSize.Height - 5;
-            pointCoords.Add(new PointF(0, yOrigin));
-
-            for (int i = 0; i < barCount; i++)
+            // Transform x-axis data to logarithmic scale
+            var logData = new double[xData.Length];
+            for (int i = 0; i < xData.Length; i++)
             {
-                float value = -Math.Abs(heightMap[i]);
-                float pointHeight = yOrigin - Math.Abs(DrawingHeightCalc(value));
-
-                PointF point = new PointF((i - 1) * barWidth + (barWidth / 2), pointHeight);
-                pointCoords.Add(point);
-            }
-            pointCoords.Add(new PointF(_visualizerSize.Width, yOrigin));
-            
-            Pen visualizerPen = new Pen(_visualizerBarColor, 3);
-            g.DrawCurve(visualizerPen, pointCoords.ToArray());
-        }
-
-        public float[] ResampleAverage(float[] samples, int targetCount, bool usePerceivedScale = true)
-        {
-            // Calculate the sample rate and number of samples
-            int sampleRate = _audioCapture.WaveFormat.SampleRate;
-            int sampleCount = samples.Length;
-
-            // Calculate the number of samples to use per bar
-            float minFreq = 20f;
-            float maxFreq = 20000f;
-            float logMin = (float)Math.Log10(minFreq);
-            float logMax = (float)Math.Log10(maxFreq);
-            float logRange = logMax - logMin;
-            float logStep = logRange / targetCount;
-            int[] sampleCounts = new int[targetCount];
-            float[] barHeights = new float[targetCount];
-            for (int i = 0; i < targetCount; i++)
-            {
-                float logFreq = logMin + (i + 0.5f) * logStep;
-                float freq = (float)Math.Pow(10, logFreq);
-                float freqStart = (float)(freq / Math.Pow(2, 0.5f / 2));
-                float freqEnd = (float)(freq * Math.Pow(2, 0.5f / 2));
-                int sampleStart = (int)(freqStart / sampleRate * sampleCount);
-                int sampleEnd = (int)(freqEnd / sampleRate * sampleCount);
-                sampleCounts[i] = sampleEnd - sampleStart + 1;
-            }
-
-            // Apply weighting function to frequency domain sample
-            for (int i = 0; i < sampleCount; i++)
-            {
-                float freq = (float)i / sampleCount * 44100;
-                float weight = usePerceivedScale ? GetPerceivedWeight(freq) : 1f;
-                samples[i] *= weight;
-            }
-
-            // Compute the heights for each bar
-            for (int i = 0; i < targetCount; i++)
-            {
-                int sampleStart = 0;
-                for (int j = 0; j < i; j++)
+                logData[i] = Math.Log(xData[i], 10);
+                // add check to replace negative or zero data with small positive value
+                if (logData[i] <= 0)
                 {
-                    sampleStart += sampleCounts[j];
+                    logData[i] = double.Epsilon;
                 }
-                int sampleEnd = sampleStart + sampleCounts[i] - 1;
-                float barHeight = 0f;
-                for (int j = sampleStart; j <= sampleEnd; j++)
-                {
-                    float sample = samples[j];
-                    barHeight += sample * sample;
-                }
-                barHeight /= sampleCounts[i];
-
-                barHeights[i] = barHeight;
             }
-            
-            return barHeights;
+
+            // Perform cubic spline interpolation
+            var interpolator = CubicSpline.InterpolateNaturalSorted(logData, yData);
+            var xInterp = new double[numPoints];
+            var yInterp = new double[numPoints];
+            var step = (logData.Last() - logData.First()) / (numPoints - 1);
+
+            for (int i = 0; i < numPoints; i++)
+            {
+                var x = logData.First() + i * step;
+
+                // add check to replace negative or zero data with small positive value
+                if (x <= 0)
+                {
+                    x = double.Epsilon;
+                }
+
+                xInterp[i] = Math.Pow(10, x);
+                yInterp[i] = interpolator.Interpolate(x);
+
+                // add check to replace NaN data with zero
+                if (double.IsNaN(yInterp[i]))
+                {
+                    yInterp[i] = 0;
+                }
+            }
+
+            return (xInterp, yInterp);
         }
 
-        private float GetPerceivedWeight(float freq)
-        {
-            float a = 1.67332f;
-            float b = -0.080928f;
-            float c = 0.025436f;
-            float d = -0.00015783f;
-            float e = 0.000000282186f;
-            float f = -0.000000000194202f;
-            float frequency = Math.Max(1, freq);
-            float weight = (float)(a + b * Math.Log10(frequency) + c * Math.Pow(Math.Log10(frequency), 2) + d * Math.Pow(Math.Log10(frequency), 3) + e * Math.Pow(Math.Log10(frequency), 4) + f * Math.Pow(Math.Log10(frequency), 5));
-            return weight;
-        }
-
-        /// <summary>
-        /// Get current audio source's output
-        /// </summary>
-        /// <param name="buffer">WaveBuffer to draw graphs from</param>
-        /// <returns></returns>
-        private void GetValues(WaveBuffer buffer, int byteLength)
-        {
-            float[] combinedSample = Enumerable
-                .Range(0, byteLength / 4)
-                .Select(x => BitConverter.ToSingle(buffer, x * 4))
-                .ToArray();
-
-            int channelCount = _audioCapture.WaveFormat.Channels;
-            float[][] channelSamples = Enumerable.Range(0, channelCount).Select(channelSample => Enumerable
-                    .Range(0, combinedSample.Length / 2)
-                    .Select(x => combinedSample[channelSample + x * channelCount])
-                    .ToArray())
-                .ToArray();
-
-            float[] sampleAverage = Enumerable
-                .Range(0, combinedSample.Length / channelCount)
-                .Select(index => Enumerable
-                    .Range(0, channelCount)
-                    .Select(x => channelSamples[x][index])
-                    .Average())
-                .ToArray();
-
-            double logVal = Math.Ceiling(Math.Log(sampleAverage.Length, 2));
-            int lenVal = (int)Math.Pow(2, logVal);
-            float[] sampleBuffer = new float[lenVal];
-
-            Array.Copy(sampleAverage, sampleBuffer, sampleAverage.Length);
-            Complex[] complexSource = sampleBuffer
-                .Select(v => new Complex() { X = v })
-                .ToArray();
-
-            FastFourierTransform.FFT(false, (int)logVal, complexSource);
-
-            Complex[] halvedSample = complexSource
-                .Take(complexSource.Length / 2)
-                .ToArray();
-
-            float[] freqDomainSample = halvedSample
-                .Select(v => (float)Math.Sqrt(v.X * v.X + v.Y * v.Y))
-                .ToArray();
-            
-            _fftBuffer = freqDomainSample;
-        }
-
-        /// <summary>
-        /// Calculate visualizer bar height
-        /// </summary>
-        /// <param name="i">The nth place of bar</param>
-        /// <param name="value">The FFT value of frequency</param>
-        /// <returns></returns>
-        private float DrawingHeightCalc(float value)
-        {
-            float returnVal = value * VisualizerMultiplier;
-            if (returnVal > _visualizerSize.Height) returnVal = _visualizerSize.Height;
-            return returnVal;
-        }
 
         /// <summary>
         /// Flushes the buffer bitmap to widget
         /// </summary>
-        private void UpdateWidget() {
+        private void UpdateWidget()
+        {
             if (_bitmapLock.WaitOne(mutex_timeout))
             {
+                if (_bitmapCurrent == null) return;
+
                 WidgetUpdatedEventArgs e = new WidgetUpdatedEventArgs();
                 e.WidgetBitmap = _bitmapCurrent;
                 e.WaitMax = 1000;
                 WidgetUpdated?.Invoke(this, e);
                 _isDrawing = false;
 
-                _bitmapLock.ReleaseMutex(); 
+                _bitmapLock.ReleaseMutex();
             }
-        }
-
-        /// <summary>
-        /// Define VisualizerBar for negative height
-        /// </summary>
-        /// <param name="x_in">X coordinate for rectangle</param>
-        /// <param name="y_in">Y coordinate for rectangle</param>
-        /// <param name="w_in">Width of rectangle</param>
-        /// <param name="h_in">Height of rectangle</param>
-        /// <returns></returns>
-        private RectangleF VisualizerBar(float x_in, float y_in, float w_in, float h_in)
-        {
-            float x, y, w, h;
-
-            x = x_in;
-            y = y_in;
-            w = w_in;
-            h = h_in;
-
-            if (h_in < 0)
-            {
-                h = -h_in;
-                y = y_in + h_in;
-            }
-
-            return new RectangleF(x, y, w, h);
         }
 
         /// <summary>
@@ -585,13 +439,6 @@ namespace AudioVisualizerWidget {
             }
         }
 
-        public void Dispose() {
-            _pauseDrawing = true;
-            run_task = false;
-            _bitmapCurrent.Dispose();
-            DisposeAudioCapture();
-        }
-
         public void EnterSleep()
         {
             _pauseDrawing = true;
@@ -605,45 +452,6 @@ namespace AudioVisualizerWidget {
         public UserControl GetSettingsControl()
         {
             return new SettingsControl(this);
-        }
-    }
-
-    /// <summary>
-    /// Workaround for wasapi
-    /// </summary>
-    class WasapiLoopbackCaptureWorkaround : WasapiCapture
-    {
-        public WasapiLoopbackCaptureWorkaround() :
-            this(GetDefaultLoopbackCaptureDevice())
-        {
-        }
-
-        public WasapiLoopbackCaptureWorkaround(MMDevice captureDevice) :
-            base(captureDevice)
-        {
-        }
-
-        public static MMDevice GetDefaultLoopbackCaptureDevice()
-        {
-            MMDeviceEnumerator devices = new MMDeviceEnumerator();
-            return devices.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-        }
-
-        public override WaveFormat WaveFormat
-        {
-            get { return base.WaveFormat; }
-            set { base.WaveFormat = value; }
-        }
-
-        protected override AudioClientStreamFlags GetAudioClientStreamFlags()
-        {
-            return AudioClientStreamFlags.Loopback;
-        }
-
-        protected new void Dispose()
-        {
-            StopRecording();
-            base.Dispose();
         }
     }
 }

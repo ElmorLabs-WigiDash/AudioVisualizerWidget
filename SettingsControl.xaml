@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:AudioVisualizerWidget"
              mc:Ignorable="d" 
-             d:DesignHeight="190" d:DesignWidth="225">
+             d:DesignHeight="300" d:DesignWidth="225" d:Background="White">
     <StackPanel>
         <Grid Margin="2">
             <Grid.ColumnDefinitions>
@@ -42,18 +42,13 @@
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
             <Label Content="Visualizer Density:" FontSize="10"></Label>
-            <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="1" Maximum="40"></Slider>
+            <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="1" Maximum="300"></Slider>
         </Grid>
 
-        <Grid Margin="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition></ColumnDefinition>
-                <ColumnDefinition></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <Label Content="Visualizer Multiplier:" FontSize="10"></Label>
-            <Slider x:Name="vmSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="0.01" Maximum="3" TickFrequency="0.01"></Slider>
-        </Grid>
+        <CheckBox x:Name="normalizeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="6, 2" Content="Normalize Volume" FontSize="10"></CheckBox>
+        <CheckBox x:Name="gridCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="6, 2" Content="Show Grid" FontSize="10"></CheckBox>
+        <CheckBox x:Name="axisCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="6, 2" Content="Show Axis" FontSize="10"></CheckBox>
 
-        <Button Margin="2" Content="Save" Click="SaveButton_Click"></Button>
+        <Button Margin="2" Content="Save" Click="SaveButton_Click" HorizontalAlignment="Stretch"></Button>
     </StackPanel>
 </UserControl>

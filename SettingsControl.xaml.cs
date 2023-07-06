@@ -27,7 +27,9 @@ namespace AudioVisualizerWidget
             bgColor.Text = ColorTranslator.ToHtml(Parent.UserVisualizerBgColor);
             fgColor.Text = ColorTranslator.ToHtml(Parent.UserVisualizerBarColor);
             vdSlider.Value = Parent.VisualizerDensity;
-            vmSlider.Value = Parent.VisualizerMultiplier;
+            normalizeCheck.IsChecked = Parent.VisualizerNormalize;
+            gridCheck.IsChecked = Parent.VisualizerShowGrid;
+            axisCheck.IsChecked = Parent.VisualizerShowAxis;
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -39,7 +41,9 @@ namespace AudioVisualizerWidget
                 Parent.UserVisualizerBgColor = ColorTranslator.FromHtml(bgColor.Text);
                 Parent.UserVisualizerBarColor = ColorTranslator.FromHtml(fgColor.Text);
                 Parent.VisualizerDensity = (int)vdSlider.Value;
-                Parent.VisualizerMultiplier = (float)vmSlider.Value;
+                Parent.VisualizerNormalize = normalizeCheck.IsChecked == true;
+                Parent.VisualizerShowGrid = gridCheck.IsChecked == true;
+                Parent.VisualizerShowAxis = axisCheck.IsChecked == true;
                 Parent.UpdateSettings();
                 Parent.SaveSettings();
             }
