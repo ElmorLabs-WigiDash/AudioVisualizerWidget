@@ -58,7 +58,7 @@ namespace AudioVisualizerWidget
 
         public void Start()
         {
-            if (_capture.CaptureState != CaptureState.Capturing && _capture.CaptureState != CaptureState.Starting) _capture.StartRecording();
+            if (_capture.CaptureState == CaptureState.Stopped) _capture.StartRecording();
         }
 
         public void Stop()

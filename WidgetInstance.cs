@@ -97,7 +97,9 @@ namespace AudioVisualizerWidget
                     {
                         DrawWidget();
                     }
-                    Thread.Sleep(50);
+
+                    // Limit to 10 FPS
+                    Thread.Sleep(100);
                 }
             });
         }
