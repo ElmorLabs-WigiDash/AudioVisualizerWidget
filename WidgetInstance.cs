@@ -457,7 +457,6 @@ namespace AudioVisualizerWidget
         {
             run_task = false;
             _pauseDrawing = true;
-            _audioDeviceHandler?.Dispose();
         }
 
         public UserControl GetSettingsControl()
