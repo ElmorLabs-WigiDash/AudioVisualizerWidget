@@ -86,8 +86,8 @@ namespace AudioVisualizerWidget
         {
             if (_token.IsCancellationRequested)
             {
-                _capture.Dispose();
-                _device.Dispose();
+                _capture?.Dispose();
+                _device?.Dispose();
             }
         }
 
@@ -107,16 +107,15 @@ namespace AudioVisualizerWidget
         {
             if (_capture.CaptureState == CaptureState.Stopped)
             {
-                _capture.Dispose();
-                _device.Dispose();
+                _capture?.Dispose();
+                _device?.Dispose();
             }
             else
             {
                 Stop();
             }
-            try { _cts.Cancel(); } catch { }
-            _cts.Dispose();
-
+            try { _cts?.Cancel(); } catch { }
+            _cts?.Dispose();
         }
     }
 }
