@@ -92,7 +92,13 @@ namespace AudioVisualizerWidget
             ClearWidget();
 
             // Hook to default device
-            HandleInputDeviceChange(defaultDeviceId);
+            bool hookResult = HandleInputDeviceChange(defaultDeviceId);
+
+            if (!hookResult)
+            {
+                ClearWidget("Could not hook into audio device!");
+                return;
+            }
 
             // Start Drawing every 100ms
             run_task = true;
@@ -195,11 +201,11 @@ namespace AudioVisualizerWidget
             return deviceId;
         }
 
-        private void HandleInputDeviceChange(string newId)
+        private bool HandleInputDeviceChange(string newId)
         {
             if (string.IsNullOrEmpty(newId))
             {
-                return;
+                return false;
             }
 
             _audioDeviceHandler?.Dispose();
@@ -211,11 +217,19 @@ namespace AudioVisualizerWidget
                 _audioDataAnalyzer = null;
             }
 
-            _audioDeviceHandler = _audioDeviceSource.CreateHandler(newId);
-            _audioDataAnalyzer = new AudioDataAnalyzer(_audioDeviceHandler);
-            _audioDataAnalyzer.Update += Update;
-            InitDataStorage(_audioDataAnalyzer, _audioDeviceHandler);
-            _audioDeviceHandler.Start();
+            try
+            {
+                _audioDeviceHandler = _audioDeviceSource.CreateHandler(newId);
+                _audioDataAnalyzer = new AudioDataAnalyzer(_audioDeviceHandler);
+                _audioDataAnalyzer.Update += Update;
+                InitDataStorage(_audioDataAnalyzer, _audioDeviceHandler);
+                _audioDeviceHandler.Start();
+            } catch
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private void InitDataStorage(AudioDataAnalyzer analyzer, AudioDeviceHandler handler)
