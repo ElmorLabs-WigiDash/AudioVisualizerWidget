@@ -26,7 +26,6 @@ namespace AudioVisualizerWidget
 
         // Threading Variables
         private bool _pauseDrawing = false;
-        private bool _isDrawing = false;
         private readonly Mutex _bitmapLock = new Mutex();
         private const int mutex_timeout = 100;
         private volatile bool run_task;
@@ -80,12 +79,20 @@ namespace AudioVisualizerWidget
 
             // Audio Capture
             //ScanForDevice();
+            
 
-            // Clear Widget
+            // Get default device
+            string defaultDeviceId = FindDefaultDevice();
+
+            if (defaultDeviceId == string.Empty)
+            {
+                ClearWidget("No supported devices!");
+                return;
+            }
             ClearWidget();
 
             // Hook to default device
-            HandleInputDeviceChange(FindDefaultDevice());
+            HandleInputDeviceChange(defaultDeviceId);
 
             // Start Drawing every 100ms
             run_task = true;
@@ -183,18 +190,18 @@ namespace AudioVisualizerWidget
 
         private string FindDefaultDevice()
         {
-            string deviceId = _audioDeviceSource.DefaultDevice;
-
-            if (deviceId == null)
-            {
-                deviceId = _audioDeviceSource.Devices.FirstOrDefault()?.ID;
-            }
+            string deviceId = _audioDeviceSource.DefaultDevice ?? _audioDeviceSource.Devices[0]?.ID ?? string.Empty;
 
             return deviceId;
         }
 
         private void HandleInputDeviceChange(string newId)
         {
+            if (string.IsNullOrEmpty(newId))
+            {
+                return;
+            }
+
             _audioDeviceHandler?.Dispose();
             _audioDeviceHandler = null;
 
@@ -204,13 +211,7 @@ namespace AudioVisualizerWidget
                 _audioDataAnalyzer = null;
             }
 
-            if (newId == null)
-            {
-                newId = FindDefaultDevice();
-                return;
-            }
-
-            _audioDeviceHandler = _audioDeviceSource.CreateHandlder(newId);
+            _audioDeviceHandler = _audioDeviceSource.CreateHandler(newId);
             _audioDataAnalyzer = new AudioDataAnalyzer(_audioDeviceHandler);
             _audioDataAnalyzer.Update += Update;
             InitDataStorage(_audioDataAnalyzer, _audioDeviceHandler);
@@ -241,13 +242,20 @@ namespace AudioVisualizerWidget
         /// <summary>
         /// Clears widget
         /// </summary>
-        public void ClearWidget()
+        public void ClearWidget(string status = "")
         {
             if (_bitmapLock.WaitOne(mutex_timeout))
             {
                 using (Graphics g = Graphics.FromImage(_bitmapCurrent))
                 {
                     g.Clear(_visualizerBgColor);
+
+                    if (status != "")
+                    {
+                        RectangleF layoutRectangle =
+                            new RectangleF(0, 0, WidgetSize.ToSize().Width, WidgetSize.ToSize().Height);
+                        g.DrawString(status, new Font("Lucida Console", 16, FontStyle.Bold), new SolidBrush(_visualizerBarColor), layoutRectangle);
+                    }
                 }
 
                 _bitmapLock.ReleaseMutex();
@@ -268,15 +276,12 @@ namespace AudioVisualizerWidget
             }
 
             // Check drawing conditions and frequency data values
-            if (!_isDrawing && !_pauseDrawing)
+            if (!_pauseDrawing)
             {
                 if (_bitmapLock.WaitOne(mutex_timeout))
                 {
                     using (Graphics g = Graphics.FromImage(_bitmapCurrent))
                     {
-                        // Set flag
-                        _isDrawing = true;
-
                         // Set smoothing mode
                         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
@@ -339,9 +344,7 @@ namespace AudioVisualizerWidget
 
                         plt.Render(_bitmapCurrent);
                     }
-
-                    // Clear drawing flag
-                    _isDrawing = false;
+                    
                     // Release bitmap lock
                     _bitmapLock.ReleaseMutex();
                 }
@@ -402,13 +405,19 @@ namespace AudioVisualizerWidget
         {
             if (_bitmapLock.WaitOne(mutex_timeout))
             {
-                if (_bitmapCurrent == null) return;
+                if (_bitmapCurrent == null)
+                {
+                    _bitmapLock.ReleaseMutex();
+                    return;
+                }
 
-                WidgetUpdatedEventArgs e = new WidgetUpdatedEventArgs();
-                e.WidgetBitmap = _bitmapCurrent;
-                e.WaitMax = 1000;
+                WidgetUpdatedEventArgs e = new WidgetUpdatedEventArgs
+                {
+                    WidgetBitmap = _bitmapCurrent,
+                    WaitMax = 1000
+                };
+
                 WidgetUpdated?.Invoke(this, e);
-                _isDrawing = false;
 
                 _bitmapLock.ReleaseMutex();
             }
@@ -419,7 +428,8 @@ namespace AudioVisualizerWidget
         /// </summary>
         public void RequestUpdate()
         {
-            DrawWidget();
+            UpdateWidget();
+            //DrawWidget();
         }
 
         public void ClickEvent(ClickType click_type, int x, int y)
@@ -444,13 +454,13 @@ namespace AudioVisualizerWidget
         public void EnterSleep()
         {
             _pauseDrawing = true;
-            _audioDeviceHandler.Stop();
+            _audioDeviceHandler?.Stop();
         }
 
         public void ExitSleep()
         {
             _pauseDrawing = false;
-            _audioDeviceHandler.Start();
+            _audioDeviceHandler?.Start();
         }
 
         public void Dispose()
