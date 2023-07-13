@@ -13,6 +13,7 @@ using NAudio.Dsp;
 using System.Threading.Tasks;
 using ScottPlot;
 using MathNet.Numerics.Interpolation;
+using System.IO;
 
 namespace AudioVisualizerWidget
 {
@@ -20,9 +21,9 @@ namespace AudioVisualizerWidget
     {
 
         // Allow console for easier debug
-        //[DllImport("kernel32.dll", SetLastError = true)]
-        //[return: MarshalAs(UnmanagedType.Bool)]
-        //static extern bool AllocConsole();
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool AllocConsole();
 
         // Threading Variables
         private bool _pauseDrawing = false;
@@ -60,7 +61,9 @@ namespace AudioVisualizerWidget
         public WidgetInstance(AudioVisualizerWidget parent, WidgetSize widget_size, Guid instance_guid)
         {
             // Open Console if DEBUG
-            //if (DEBUG_FLAG) AllocConsole();
+#if DEBUG
+            AllocConsole();
+#endif
 
             // Global
             this.parent = parent;
@@ -77,21 +80,23 @@ namespace AudioVisualizerWidget
             // Hook to update theme
             parent.WidgetManager.GlobalThemeUpdated += UpdateSettings;
 
-            // Audio Capture
-            //ScanForDevice();
-            
 
             // Get default device
+            Console.WriteLine("Initializer: Finding default device...");
             string defaultDeviceId = FindDefaultDevice();
 
             if (defaultDeviceId == string.Empty)
             {
+                Console.WriteLine("Initializer: No supported devices found!");
                 ClearWidget("No supported devices!");
                 return;
             }
+
+            // Clear Widget
             ClearWidget();
 
             // Hook to default device
+            Console.WriteLine("Initializer: Found default device: " + defaultDeviceId);
             bool hookResult = HandleInputDeviceChange(defaultDeviceId);
 
             if (!hookResult)
@@ -203,26 +208,42 @@ namespace AudioVisualizerWidget
 
         private bool HandleInputDeviceChange(string newId)
         {
+            // Null check
             if (string.IsNullOrEmpty(newId))
             {
+                Console.WriteLine("HandleInputDeviceChange: Invalid device ID!");
                 return false;
             }
 
+            // Dispose any previous handlers
+            Console.WriteLine("HandleInputDeviceChange: Disposing previous handler...");
             _audioDeviceHandler?.Dispose();
             _audioDeviceHandler = null;
 
+            // Dispose any previous analyzers
             if (_audioDataAnalyzer != null)
             {
+                Console.WriteLine("HandleInputDeviceChange: Disposing previous analyzer...");
                 _audioDataAnalyzer.Update -= Update;
                 _audioDataAnalyzer = null;
             }
 
             try
             {
+                // Create new handler and analyzer
+                Console.WriteLine("HandleInputDeviceChange: Creating new handler...");
                 _audioDeviceHandler = _audioDeviceSource.CreateHandler(newId);
                 _audioDataAnalyzer = new AudioDataAnalyzer(_audioDeviceHandler);
+
+                // Hook into analyzer
+                Console.WriteLine("HandleInputDeviceChange: Hooking into analyzer...");
                 _audioDataAnalyzer.Update += Update;
+
+                // Initialize data storage
                 InitDataStorage(_audioDataAnalyzer, _audioDeviceHandler);
+
+                // Start handler
+                Console.WriteLine("HandleInputDeviceChange: Starting handler...");
                 _audioDeviceHandler.Start();
             } catch
             {
@@ -234,6 +255,7 @@ namespace AudioVisualizerWidget
 
         private void InitDataStorage(AudioDataAnalyzer analyzer, AudioDeviceHandler handler)
         {
+            Console.WriteLine("InitDataStorage: Initializing data storage...");
             _frequencyDataSeries = new Dictionary<int, double>(analyzer.FftDataPoints);
             _frequencyDataSeries.Append(analyzer.FftIndices, analyzer.DbValues);
         }

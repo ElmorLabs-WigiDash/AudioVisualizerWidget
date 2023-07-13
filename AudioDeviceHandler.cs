@@ -32,6 +32,7 @@ namespace AudioVisualizerWidget
 
         public AudioDeviceHandler(MMDevice device)
         {
+            Console.WriteLine($"AudioDeviceHandler: Device: {device.FriendlyName}");
             _token = _cts.Token;
             _device = device;
 
@@ -39,11 +40,17 @@ namespace AudioVisualizerWidget
 
             SamplesPerSecond = _waveFormat.SampleRate;
 
+            Console.WriteLine($"AudioDeviceHandler: Sample rate: {SamplesPerSecond}");
+
             BufferSize = SamplesPerSecond * 10;
+
+            Console.WriteLine($"AudioDeviceHandler: Buffer size: {BufferSize}");
 
             _input = new double[BufferSize];
             _inputBack = new double[BufferSize];
             _currentBuffer = new double[(int)(SamplesPerSecond * 0.1)];
+
+            Console.WriteLine("AudioDeviceHandler: Hooking into audio device...");
 
             var capture = new WasapiLoopbackCapture(device);
             capture.DataAvailable += DataAvailable;
@@ -53,6 +60,7 @@ namespace AudioVisualizerWidget
 
             _reader = new SampleReader(_waveFormat);
 
+            Console.WriteLine("AudioDeviceHandler: Starting audio capture...");
             _ = Task.Run(ProcessData, _cts.Token);
         }
 
