@@ -127,7 +127,7 @@ namespace AudioVisualizerWidget
         /// </summary>
         public void UpdateSettings()
         {
-            if (UseGlobalTheme || parent.WidgetManager.PreferGlobalTheme)
+            if (UseGlobalTheme)
             {
                 _visualizerFont = _globalTheme.PrimaryFont;
                 _visualizerBarColor = _globalTheme.PrimaryFgColor;
@@ -176,7 +176,7 @@ namespace AudioVisualizerWidget
                 _globalTheme = parent.WidgetManager.GlobalWidgetTheme;
 
                 if (!string.IsNullOrEmpty(useGlobalThemeStr)) bool.TryParse(useGlobalThemeStr, out UseGlobalTheme);
-                else UseGlobalTheme = false;
+                else UseGlobalTheme = parent.WidgetManager.PreferGlobalTheme;
                 if (!string.IsNullOrEmpty(visualizerGraphTypeStr)) Enum.TryParse(visualizerGraphTypeStr, out VisualizerGraphType);
                 else VisualizerGraphType = GraphType.BarGraph;
                 if (!string.IsNullOrEmpty(visualizerShowGridStr)) bool.TryParse(visualizerShowGridStr, out VisualizerShowGrid);
