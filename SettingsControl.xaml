@@ -12,8 +12,8 @@
                 <ColumnDefinition></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <Label Content="Background Color:" FontSize="10"></Label>
-            <TextBox x:Name="bgColor" Grid.Column="1"></TextBox>
+            <Label Content="Background Color:" FontSize="10" HorizontalAlignment="Stretch"></Label>
+            <TextBox x:Name="bgColor" Grid.Column="1" HorizontalAlignment="Stretch"></TextBox>
         </Grid>
 
         <Grid Margin="2">
@@ -21,8 +21,8 @@
                 <ColumnDefinition></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <Label Content="Bar Color:" FontSize="10"></Label>
-            <TextBox x:Name="fgColor" Grid.Column="1"></TextBox>
+            <Label Content="Bar Color:" FontSize="10" HorizontalAlignment="Stretch"></Label>
+            <TextBox x:Name="fgColor" Grid.Column="1" HorizontalAlignment="Stretch"></TextBox>
         </Grid>
 
         <CheckBox x:Name="globalThemeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Use Global Theme" FontSize="10"></CheckBox>
@@ -32,8 +32,8 @@
                 <ColumnDefinition></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <Label Content="Graph Type:" FontSize="10"></Label>
-            <ComboBox x:Name="graphSelect" Grid.Column="1"></ComboBox>
+            <Label Content="Graph Type:" FontSize="10" HorizontalAlignment="Stretch"></Label>
+            <ComboBox x:Name="graphSelect" Grid.Column="1" HorizontalAlignment="Stretch"></ComboBox>
         </Grid>
 
         <Grid Margin="2">
@@ -41,7 +41,7 @@
                 <ColumnDefinition></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <Label Content="Visualizer Density:" FontSize="10"></Label>
+            <Label Content="Visualizer Density:" FontSize="10" HorizontalAlignment="Stretch"></Label>
             <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="1" Maximum="300"></Slider>
         </Grid>
 
