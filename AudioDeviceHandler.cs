@@ -66,12 +66,20 @@ namespace AudioVisualizerWidget
 
         public void Start()
         {
-            if (_capture.CaptureState == CaptureState.Stopped) _capture.StartRecording();
+            if (_capture.CaptureState == CaptureState.Stopped)
+            {
+                Console.WriteLine("AudioDeviceHandler: Starting Capture...");
+                _capture.StartRecording();
+            }
         }
 
         public void Stop()
         {
-            if (_capture.CaptureState == CaptureState.Capturing) _capture.StopRecording();
+            if (_capture.CaptureState == CaptureState.Capturing)
+            {
+                Console.WriteLine("AudioDeviceHandler: Stopping Capture...");
+                _capture.StopRecording();
+            }
         }
 
         private void ProcessData()
