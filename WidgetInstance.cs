@@ -400,7 +400,7 @@ namespace AudioVisualizerWidget
                 // add check to replace negative or zero data with small positive value
                 if (logData[i] <= 0)
                 {
-                    logData[i] = double.Epsilon;
+                    logData[i] = 0.01 * (i + 1);
                 }
             }
 
@@ -413,13 +413,6 @@ namespace AudioVisualizerWidget
             for (int i = 0; i < numPoints; i++)
             {
                 var x = logData.First() + i * step;
-
-                // add check to replace negative or zero data with small positive value
-                if (x <= 0)
-                {
-                    x = double.Epsilon;
-                }
-
                 xInterp[i] = Math.Pow(10, x);
                 yInterp[i] = interpolator.Interpolate(x);
 
