@@ -183,7 +183,11 @@ namespace AudioVisualizerWidget
                 else VisualizerShowGrid = false;
                 if (!string.IsNullOrEmpty(visualizerShowAxisStr)) bool.TryParse(visualizerShowAxisStr, out VisualizerShowAxis);
                 else VisualizerShowAxis = false;
-                if (!string.IsNullOrEmpty(visualizerDensityStr)) int.TryParse(visualizerDensityStr, out VisualizerDensity);
+                if (!string.IsNullOrEmpty(visualizerDensityStr))
+                {
+                    int.TryParse(visualizerDensityStr, out int visualizerDensityTmp);
+                    VisualizerDensity = Math.Min(300, Math.Max(visualizerDensityTmp, 4));
+                }
                 else VisualizerDensity = 50;
                 if (!string.IsNullOrEmpty(visualizerBgColorStr)) UserVisualizerBgColor = ColorTranslator.FromHtml(visualizerBgColorStr);
                 else UserVisualizerBgColor = Color.FromArgb(0, 32, 63);
@@ -350,7 +354,7 @@ namespace AudioVisualizerWidget
                             case GraphType.BarGraph:
                                 var bars = plt.AddBar(plotData.Item2, _visualizerBarColor);
                                 bars.BorderLineWidth = 0;
-                                bars.BarWidth = 1.01;
+                                bars.BarWidth = 1.05;
                                 break;
 
                             case GraphType.LineGraph:
