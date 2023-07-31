@@ -60,6 +60,13 @@ namespace AudioVisualizerWidget
 
             _reader = new SampleReader(_waveFormat);
 
+            // Play silence to initialize the audio device
+            Console.WriteLine("AudioDeviceHandler: Playing Silence...");
+            var silence = new SilenceProvider(_waveFormat).ToSampleProvider();
+            var wo = new WaveOutEvent();
+            wo.Init(silence);
+            wo.Play();
+
             Console.WriteLine("AudioDeviceHandler: Starting audio capture...");
             _ = Task.Run(ProcessData, _cts.Token);
         }
