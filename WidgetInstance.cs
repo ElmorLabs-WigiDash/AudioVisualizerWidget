@@ -80,7 +80,24 @@ namespace AudioVisualizerWidget
             // Hook to update theme
             parent.WidgetManager.GlobalThemeUpdated += UpdateSettings;
 
+            Init();
 
+            // Start Drawing every 100ms
+            run_task = true;
+            Task.Run(() =>
+            {
+                while (run_task)
+                {
+                    DrawWidget();
+
+                    // Limit to 10 FPS
+                    Thread.Sleep(100);
+                }
+            });
+        }
+
+        private void Init()
+        {
             // Get default device
             Console.WriteLine("Initializer: Finding default device...");
             string defaultDeviceId = FindDefaultDevice();
@@ -104,22 +121,6 @@ namespace AudioVisualizerWidget
                 ClearWidget("Could not hook into audio device!");
                 return;
             }
-
-            // Start Drawing every 100ms
-            run_task = true;
-            Task.Run(() =>
-            {
-                while (run_task)
-                {
-                    if (!_pauseDrawing)
-                    {
-                        DrawWidget();
-                    }
-
-                    // Limit to 10 FPS
-                    Thread.Sleep(100);
-                }
-            });
         }
 
         /// <summary>
@@ -166,7 +167,6 @@ namespace AudioVisualizerWidget
             parent.WidgetManager.LoadSetting(this, "visualizerShowGrid", out var visualizerShowGridStr);
             parent.WidgetManager.LoadSetting(this, "visualizerShowAxis", out var visualizerShowAxisStr);
             parent.WidgetManager.LoadSetting(this, "visualizerDensity", out var visualizerDensityStr);
-            parent.WidgetManager.LoadSetting(this, "visualizerMultiplier", out var visualizerMultiplierStr);
             parent.WidgetManager.LoadSetting(this, "visualizerBgColor", out var visualizerBgColorStr);
             parent.WidgetManager.LoadSetting(this, "visualizerBarColor", out var visualizerBarColorStr);
 
@@ -493,6 +493,7 @@ namespace AudioVisualizerWidget
         public void ExitSleep()
         {
             _pauseDrawing = false;
+            Init();
             _audioDeviceHandler?.Start();
         }
 
@@ -508,4 +509,3 @@ namespace AudioVisualizerWidget
         }
     }
 }
-
