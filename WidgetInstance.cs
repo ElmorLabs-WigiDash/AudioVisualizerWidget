@@ -98,28 +98,34 @@ namespace AudioVisualizerWidget
 
         private void Init()
         {
-            // Get default device
-            Console.WriteLine("Initializer: Finding default device...");
-            string defaultDeviceId = FindDefaultDevice();
-
-            if (defaultDeviceId == string.Empty)
+            try
             {
-                Console.WriteLine("Initializer: No supported devices found!");
-                ClearWidget("No supported devices!");
-                return;
-            }
+                // Get default device
+                Console.WriteLine("Initializer: Finding default device...");
+                string defaultDeviceId = FindDefaultDevice();
 
-            // Clear Widget
-            ClearWidget();
+                if (defaultDeviceId == string.Empty)
+                {
+                    Console.WriteLine("Initializer: No supported devices found!");
+                    ClearWidget("No supported devices!");
+                    return;
+                }
 
-            // Hook to default device
-            Console.WriteLine("Initializer: Found default device: " + defaultDeviceId);
-            bool hookResult = HandleInputDeviceChange(defaultDeviceId);
+                // Clear Widget
+                ClearWidget();
 
-            if (!hookResult)
+                // Hook to default device
+                Console.WriteLine("Initializer: Found default device: " + defaultDeviceId);
+                bool hookResult = HandleInputDeviceChange(defaultDeviceId);
+
+                if (!hookResult)
+                {
+                    ClearWidget("Could not hook into audio device!");
+                    return;
+                }
+            } catch
             {
-                ClearWidget("Could not hook into audio device!");
-                return;
+
             }
         }
 
