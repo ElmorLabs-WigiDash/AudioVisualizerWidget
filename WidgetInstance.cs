@@ -337,58 +337,65 @@ namespace AudioVisualizerWidget
 
                     lock (_frequencyDataSeries)
                     {
-                        // If _frequencyDataSeries has Infinity or NaN values, set them to 0
-                        foreach (var key in _frequencyDataSeries.Keys.ToList())
+                        lock (_frequencyDataSeries.Keys)
                         {
-                            if (double.IsInfinity(_frequencyDataSeries[key]) || double.IsNaN(_frequencyDataSeries[key]))
+                            lock (_frequencyDataSeries.Values)
                             {
-                                _frequencyDataSeries[key] = 0;
+                                // If _frequencyDataSeries has Infinity or NaN values, set them to 0
+                                foreach (var key in _frequencyDataSeries.Keys.ToList())
+                                {
+                                    if (double.IsInfinity(_frequencyDataSeries[key]) || double.IsNaN(_frequencyDataSeries[key]))
+                                    {
+                                        _frequencyDataSeries[key] = 0;
+                                    }
+                                }
+
+                                // Draw graph in log10 scale between 20Hz and 25kHz. Y axis is from -200 to 0.
+                                var plt = new Plot(WidgetSize.ToSize().Width, WidgetSize.ToSize().Height);
+
+                                var xAxisData = Tools.Log10(_frequencyDataSeries.Keys.Select(i => (double)i).ToArray());
+                                var yAxisData = _frequencyDataSeries.Values.Select(d => d + 200 > 190 ? 0 : d + 200).ToArray();
+
+                                var plotData = GetInterpolatedData(xAxisData, yAxisData, VisualizerDensity);
+
+                                switch (VisualizerGraphType)
+                                {
+                                    default:
+                                    case GraphType.BarGraph:
+                                        var bars = plt.AddBar(plotData.Item2, _visualizerBarColor);
+                                        bars.BorderLineWidth = 0;
+                                        bars.BarWidth = 1.05;
+                                        break;
+
+                                    case GraphType.LineGraph:
+                                        plt.AddScatter(plotData.Item1, plotData.Item2, _visualizerBarColor, markerShape: MarkerShape.none, lineWidth: 2);
+                                        break;
+                                }
+
+                                plt.Style(dataBackground: _visualizerBgColor, figureBackground: _visualizerBgColor);
+
+                                plt.SetAxisLimitsY(0, 200);
+
+                                if (VisualizerNormalize)
+                                {
+                                    plt.AxisAuto(0, 0);
+                                }
+                                else
+                                {
+                                    plt.AxisAutoX(0);
+                                }
+
+                                plt.XAxis.Color(_visualizerBarColor);
+                                plt.XAxis2.Color(_visualizerBarColor);
+                                plt.YAxis.Color(_visualizerBarColor);
+                                plt.YAxis2.Color(_visualizerBarColor);
+                                plt.Grid(VisualizerShowGrid);
+
+                                plt.Frameless(!VisualizerShowAxis);
+
+                                plt.Render(_bitmapCurrent);
                             }
                         }
-
-                        // Draw graph in log10 scale between 20Hz and 25kHz. Y axis is from -200 to 0.
-                        var plt = new Plot(WidgetSize.ToSize().Width, WidgetSize.ToSize().Height);
-
-                        var xAxisData = Tools.Log10(_frequencyDataSeries.Keys.Select(i => (double)i).ToArray());
-                        var yAxisData = _frequencyDataSeries.Values.Select(d => d + 200 > 190 ? 0 : d + 200).ToArray();
-
-                        var plotData = GetInterpolatedData(xAxisData, yAxisData, VisualizerDensity);
-
-                        switch (VisualizerGraphType)
-                        {
-                            default:
-                            case GraphType.BarGraph:
-                                var bars = plt.AddBar(plotData.Item2, _visualizerBarColor);
-                                bars.BorderLineWidth = 0;
-                                bars.BarWidth = 1.05;
-                                break;
-
-                            case GraphType.LineGraph:
-                                plt.AddScatter(plotData.Item1, plotData.Item2, _visualizerBarColor, markerShape: MarkerShape.none, lineWidth: 2);
-                                break;
-                        }
-
-                        plt.Style(dataBackground: _visualizerBgColor, figureBackground: _visualizerBgColor);
-
-                        plt.SetAxisLimitsY(0, 200);
-
-                        if (VisualizerNormalize)
-                        {
-                            plt.AxisAuto(0, 0);
-                        } else
-                        {
-                            plt.AxisAutoX(0);
-                        }
-
-                        plt.XAxis.Color(_visualizerBarColor);
-                        plt.XAxis2.Color(_visualizerBarColor);
-                        plt.YAxis.Color(_visualizerBarColor);
-                        plt.YAxis2.Color(_visualizerBarColor);
-                        plt.Grid(VisualizerShowGrid);
-
-                        plt.Frameless(!VisualizerShowAxis);
-
-                        plt.Render(_bitmapCurrent);
                     }
                     
                     // Release bitmap lock
@@ -498,9 +505,14 @@ namespace AudioVisualizerWidget
 
         public void ExitSleep()
         {
-            _pauseDrawing = false;
-            Init();
-            _audioDeviceHandler?.Start();
+            Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+
+                _pauseDrawing = false;
+
+                Init();
+            });
         }
 
         public void Dispose()
