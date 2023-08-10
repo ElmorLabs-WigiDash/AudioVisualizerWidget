@@ -422,14 +422,14 @@ namespace AudioVisualizerWidget
             }
 
             // Perform cubic spline interpolation
-            var interpolator = CubicSpline.InterpolateNaturalSorted(logData, yData);
+            var interpolator = LinearSpline.InterpolateSorted(logData, yData);
             var xInterp = new double[numPoints];
             var yInterp = new double[numPoints];
             var step = (logData.Last() - logData.First()) / (numPoints - 1);
 
             for (int i = 0; i < numPoints; i++)
             {
-                var x = logData.First() + i * step;
+                var x = logData.First() + (i * step);
                 xInterp[i] = Math.Pow(10, x);
                 yInterp[i] = interpolator.Interpolate(x);
 
