@@ -22,6 +22,8 @@ namespace AudioVisualizerWidget
         private readonly double[] _inputBack;
         private double[] _currentBuffer;
 
+        private WaveOutEvent _waveOut;
+
         public int SamplesPerSecond { get; }
         public int BufferSize { get; }
 
@@ -63,9 +65,9 @@ namespace AudioVisualizerWidget
             // Play silence to initialize the audio device
             Console.WriteLine("AudioDeviceHandler: Playing Silence...");
             var silence = new SilenceProvider(_waveFormat).ToSampleProvider();
-            var wo = new WaveOutEvent();
-            wo.Init(silence);
-            wo.Play();
+            _waveOut = new WaveOutEvent();
+            _waveOut.Init(silence);
+            _waveOut.Play();
 
             Console.WriteLine("AudioDeviceHandler: Starting audio capture...");
             _ = Task.Run(ProcessData, _cts.Token);
@@ -77,6 +79,7 @@ namespace AudioVisualizerWidget
             {
                 Console.WriteLine("AudioDeviceHandler: Starting Capture...");
                 _capture.StartRecording();
+                _waveOut?.Play();
             }
         }
 
@@ -86,6 +89,7 @@ namespace AudioVisualizerWidget
             {
                 Console.WriteLine("AudioDeviceHandler: Stopping Capture...");
                 _capture.StopRecording();
+                _waveOut?.Stop();
             }
         }
 
@@ -137,8 +141,10 @@ namespace AudioVisualizerWidget
             {
                 Stop();
             }
+
+            _waveOut?.Dispose();
+
             try { _cts?.Cancel(); } catch { }
-            _cts?.Dispose();
         }
     }
 }
