@@ -14,9 +14,9 @@ namespace AudioVisualizerWidget
         private int _fftWindowSize;
         private int _log2;
         private Complex[] _fftInput;
-        public double[] DbValues { get; }
+        public double[] DbValues { get; private set; }
         public double[,] SpectrogramBuffer { get; }
-        public const int SpectrogramFrameCount = 200;
+        public const int SpectrogramFrameCount = 1;
 
         public int FftDataPoints { get; }
         public int FftFrequencySpacing { get; }
@@ -26,9 +26,11 @@ namespace AudioVisualizerWidget
         public int[] FftIndices { get; }
 
         public double[] Samples => _handler.Samples;
-        public double[] CurrentSamples => _handler.CurrentBuffer;
+        //public double[] CurrentSamples => _handler.CurrentBuffer;
 
         public event EventHandler Update;
+
+        private double sampleRate = 44100;
 
         public AudioDataAnalyzer(AudioDeviceHandler handler)
         {
@@ -37,7 +39,7 @@ namespace AudioVisualizerWidget
             // On Windows, sample rate could be pretty much anything and FFT requires power-of-2 window size
             // So we need to pick sufficient window size based on sample rate
 
-            var sampleRate = (double)_handler.SamplesPerSecond;
+            sampleRate = (double)_handler.SamplesPerSecond;
             const double minLen = 0.05; // seconds
 
             var fftWindowSize = 512;
@@ -96,7 +98,7 @@ namespace AudioVisualizerWidget
 
         private void DataReceived(object sender, EventArgs e)
         {
-            ProcessData(_handler.Samples);
+            ProcessData2(_handler.Samples);
         }
 
         private void ProcessData(double[] input)
@@ -129,9 +131,69 @@ namespace AudioVisualizerWidget
             {
                 var c = compl[i];
                 double mag = Math.Sqrt(c.X * c.X + c.Y * c.Y);
-                var db = 20 * Math.Log10(mag);
+                var db = 20 * Math.Log10(mag*mag);
                 tgt[i] = db;
             }
         }
+
+
+        private void ProcessData2(double[] input)
+        {
+            for (int i = 0; i < _fftWindowSize; i++)
+            {
+                Complex c = new Complex();
+                if (i < input.Length)
+                {
+                    c.X = (float)(input[i] * FastFourierTransform.BlackmannHarrisWindow(i, _fftWindowSize));
+                } else
+                {
+                    c.X = 0;
+                }
+                c.Y = 0;
+                _fftInput[i] = c;
+            }
+
+            FastFourierTransform.FFT(true, _log2, _fftInput);
+
+            ComputeDbValues(_fftInput, DbValues);
+
+            Array.Copy(SpectrogramBuffer, FftDataPoints, SpectrogramBuffer, 0, (SpectrogramFrameCount - 1) * FftDataPoints);
+            for (var i = 0; i < FftDataPoints; i++)
+            {
+                SpectrogramBuffer[SpectrogramFrameCount - 1, i] = DbValues[i];
+            }
+
+            Update?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void ProcessData3(double[] input)
+        {
+
+            double[] paddedAudio = FftSharp.Pad.ZeroPad(input);
+            System.Numerics.Complex[] _fftInput = FftSharp.FFT.Forward(paddedAudio);
+            double[] fftMag = FftSharp.FFT.Power(_fftInput);
+            int fft_len = fftMag.Length > DbValues.Length ? DbValues.Length : fftMag.Length;
+            
+            Array.Copy(fftMag, DbValues, fft_len);
+            for(int i = fft_len; i < DbValues.Length; i++)
+            {
+                DbValues[i] = double.MinValue;
+            }
+
+            for (var i = 0; i < DbValues.Length; i++)
+            {
+                SpectrogramBuffer[SpectrogramFrameCount - 1, i] = DbValues[i];
+            }
+
+            /* Array.Copy(SpectrogramBuffer, FftDataPoints, SpectrogramBuffer, 0, (SpectrogramFrameCount - 1) * FftDataPoints);
+             for (var i = 0; i < FftDataPoints; i++)
+             {
+                 SpectrogramBuffer[SpectrogramFrameCount - 1, i] = DbValues[i];
+             }*/
+
+            Update?.Invoke(this, EventArgs.Empty);
+
+        }
+
     }
 }

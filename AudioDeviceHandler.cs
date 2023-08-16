@@ -20,7 +20,7 @@ namespace AudioVisualizerWidget
         private SampleReader _reader;
         private readonly double[] _input;
         private readonly double[] _inputBack;
-        private double[] _currentBuffer;
+        //private double[] _currentBuffer;
 
         private WaveOutEvent _waveOut;
 
@@ -28,7 +28,9 @@ namespace AudioVisualizerWidget
         public int BufferSize { get; }
 
         public double[] Samples => _inputBack;
-        public double[] CurrentBuffer => _currentBuffer;
+        //public double[] CurrentBuffer => _currentBuffer;
+
+        private int SampleCount = 0;
 
         public event EventHandler DataReceived;
 
@@ -44,13 +46,14 @@ namespace AudioVisualizerWidget
 
             Console.WriteLine($"AudioDeviceHandler: Sample rate: {SamplesPerSecond}");
 
-            BufferSize = SamplesPerSecond * 10;
+            BufferSize = SamplesPerSecond * 50 / 1000; // 50ms buffer
 
             Console.WriteLine($"AudioDeviceHandler: Buffer size: {BufferSize}");
 
             _input = new double[BufferSize];
             _inputBack = new double[BufferSize];
-            _currentBuffer = new double[(int)(SamplesPerSecond * 0.1)];
+            
+            //_currentBuffer = new double[(int)(BufferSize)];
 
             Console.WriteLine("AudioDeviceHandler: Hooking into audio device...");
 
@@ -97,12 +100,13 @@ namespace AudioVisualizerWidget
         {
             while (!_token.IsCancellationRequested)
             {
-                if (_processEvt.WaitOne(100))
+                if (_processEvt.WaitOne(20))
                 {
                     lock (_input)
                     {
+                        SampleCount = 0;
                         Array.Copy(_input, _inputBack, _input.Length);
-                        Array.Copy(_input, _input.Length - _currentBuffer.Length - 1, _currentBuffer, 0, _currentBuffer.Length);
+                        //Array.Copy(_input, _input.Length - _currentBuffer.Length - 1, _currentBuffer, 0, _currentBuffer.Length);
                     }
                     DataReceived?.Invoke(this, EventArgs.Empty);
                 }
@@ -126,7 +130,12 @@ namespace AudioVisualizerWidget
             lock (_input)
             {
                 _reader.ReadSamples(e.Buffer, e.BytesRecorded, _input);
+            }
+            SampleCount += e.BytesRecorded;
+            if (SampleCount > BufferSize / 2)
+            {
                 _processEvt.Set();
+                SampleCount = 0;
             }
         }
 
