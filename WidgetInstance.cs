@@ -304,9 +304,9 @@ namespace AudioVisualizerWidget
                     }
                 }
 
+                UpdateWidget();
                 _bitmapLock.ReleaseMutex();
             }
-            UpdateWidget();
         }
 
         /// <summary>
@@ -397,13 +397,13 @@ namespace AudioVisualizerWidget
                             }
                         }
                     }
-                    
+                    // Flush
+                    UpdateWidget();
+
                     // Release bitmap lock
                     _bitmapLock.ReleaseMutex();
                 }
 
-                // Flush
-                UpdateWidget();
             }
         }
 
@@ -449,24 +449,19 @@ namespace AudioVisualizerWidget
         /// </summary>
         private void UpdateWidget()
         {
-            if (_bitmapLock.WaitOne(mutex_timeout))
+            if (_bitmapCurrent == null)
             {
-                if (_bitmapCurrent == null)
-                {
-                    _bitmapLock.ReleaseMutex();
-                    return;
-                }
-
-                WidgetUpdatedEventArgs e = new WidgetUpdatedEventArgs
-                {
-                    WidgetBitmap = _bitmapCurrent,
-                    WaitMax = 1000
-                };
-
-                WidgetUpdated?.Invoke(this, e);
-
-                _bitmapLock.ReleaseMutex();
+                return;
             }
+
+            WidgetUpdatedEventArgs e = new WidgetUpdatedEventArgs
+            {
+                WidgetBitmap = _bitmapCurrent,
+                WaitMax = 1000
+            };
+
+            WidgetUpdated?.Invoke(this, e);
+
         }
 
         /// <summary>
@@ -474,8 +469,11 @@ namespace AudioVisualizerWidget
         /// </summary>
         public void RequestUpdate()
         {
-            UpdateWidget();
-            //DrawWidget();
+            if (_bitmapLock.WaitOne(mutex_timeout))
+            {
+                UpdateWidget();
+                _bitmapLock.ReleaseMutex();
+            }
         }
 
         public void ClickEvent(ClickType click_type, int x, int y)
@@ -505,14 +503,16 @@ namespace AudioVisualizerWidget
 
         public void ExitSleep()
         {
-            Task.Run(async () =>
+
+            Init();
+
+            _pauseDrawing = false;
+
+            /*Task.Run(async () =>
             {
-                await Task.Delay(1000);
+                //await Task.Delay(1000);
 
-                _pauseDrawing = false;
-
-                Init();
-            });
+            });*/
         }
 
         public void Dispose()
