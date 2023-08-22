@@ -45,6 +45,15 @@
             <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="4" Maximum="300"></Slider>
         </Grid>
 
+        <Grid Margin="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition></ColumnDefinition>
+                <ColumnDefinition></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Label Content="Visualizer Device:" FontSize="10" HorizontalAlignment="Stretch"></Label>
+            <ComboBox x:Name="deviceSelect" Grid.Column="1" HorizontalAlignment="Stretch"></ComboBox>
+        </Grid>
+
         <CheckBox x:Name="normalizeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Normalize Volume" FontSize="10"></CheckBox>
         <CheckBox x:Name="gridCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Show Grid" FontSize="10"></CheckBox>
         <CheckBox x:Name="axisCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Show Axis" FontSize="10"></CheckBox>

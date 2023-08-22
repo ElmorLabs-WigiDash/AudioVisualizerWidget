@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace AudioVisualizerWidget
 {
-    class AudioDeviceHandler : IDisposable
+    public class AudioDeviceHandler : IDisposable
     {
         private CancellationTokenSource _cts = new CancellationTokenSource();
         private CancellationToken _token;

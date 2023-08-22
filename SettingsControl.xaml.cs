@@ -23,6 +23,11 @@ namespace AudioVisualizerWidget
             graphSelect.ItemsSource = Enum.GetValues(typeof(GraphType));
             graphSelect.SelectedValue = Parent.VisualizerGraphType;
 
+            deviceSelect.ItemsSource = Parent.AudioDeviceSource.Devices;
+            deviceSelect.SelectedValuePath = "ID";
+            deviceSelect.DisplayMemberPath = "DisplayName";
+            deviceSelect.SelectedValue = Parent.SelectedDeviceID;
+
             globalThemeCheck.IsChecked = Parent.UseGlobalTheme;
             bgColor.Text = ColorTranslator.ToHtml(Parent.UserVisualizerBgColor);
             fgColor.Text = ColorTranslator.ToHtml(Parent.UserVisualizerBarColor);
@@ -36,6 +41,7 @@ namespace AudioVisualizerWidget
         {
             try
             {
+                if (deviceSelect.SelectedValue != null) Parent.HandleInputDeviceChange((string)deviceSelect.SelectedValue);
                 Parent.VisualizerGraphType = (GraphType)graphSelect.SelectedValue;
                 Parent.UseGlobalTheme = globalThemeCheck.IsChecked == true;
                 Parent.UserVisualizerBgColor = ColorTranslator.FromHtml(bgColor.Text);

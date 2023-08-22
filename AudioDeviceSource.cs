@@ -10,7 +10,7 @@ using System.Windows.Threading;
 
 namespace AudioVisualizerWidget
 {
-    class AudioDeviceSource : IDisposable, IMMNotificationClient
+    public class AudioDeviceSource : IDisposable, IMMNotificationClient
     {
         private MMDeviceEnumerator _enumerator = new MMDeviceEnumerator();
         private Dispatcher _dispatcher;

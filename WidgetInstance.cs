@@ -52,7 +52,8 @@ namespace AudioVisualizerWidget
         public Color UserVisualizerBgColor;
         public Color UserVisualizerBarColor;
 
-        private readonly AudioDeviceSource _audioDeviceSource = new AudioDeviceSource();
+        public string SelectedDeviceID = string.Empty;
+        public AudioDeviceSource AudioDeviceSource = new AudioDeviceSource();
         private AudioDeviceHandler _audioDeviceHandler;
         private AudioDataAnalyzer _audioDataAnalyzer;
 
@@ -100,22 +101,32 @@ namespace AudioVisualizerWidget
         {
             try
             {
-                // Get default device
-                Console.WriteLine("Initializer: Finding default device...");
-                string defaultDeviceId = FindDefaultDevice();
+                string defaultDeviceId;
 
-                if (defaultDeviceId == string.Empty)
+                if (string.IsNullOrEmpty(SelectedDeviceID))
                 {
-                    Console.WriteLine("Initializer: No supported devices found!");
-                    ClearWidget("No supported devices!");
-                    return;
+                    // Get default device
+                    Console.WriteLine("Initializer: Finding default device...");
+
+                    defaultDeviceId = FindDefaultDevice();
+
+                    if (defaultDeviceId == string.Empty)
+                    {
+                        Console.WriteLine("Initializer: No supported devices found!");
+                        ClearWidget("No supported devices!");
+                        return;
+                    }
+                } else
+                {
+                    Console.WriteLine("Initializer: Setting device...");
+                    defaultDeviceId = SelectedDeviceID;
                 }
 
                 // Clear Widget
                 ClearWidget();
 
                 // Hook to default device
-                Console.WriteLine("Initializer: Found default device: " + defaultDeviceId);
+                Console.WriteLine("Initializer: Found device: " + defaultDeviceId);
                 bool hookResult = HandleInputDeviceChange(defaultDeviceId);
 
                 if (!hookResult)
@@ -153,6 +164,7 @@ namespace AudioVisualizerWidget
         /// </summary>
         public void SaveSettings()
         {
+            parent.WidgetManager.StoreSetting(this, "DeviceID", SelectedDeviceID);
             parent.WidgetManager.StoreSetting(this, "useGlobalTheme", UseGlobalTheme.ToString());
             parent.WidgetManager.StoreSetting(this, "visualizerGraphType", VisualizerGraphType.ToString());
             parent.WidgetManager.StoreSetting(this, "visualizerShowGrid", VisualizerShowGrid.ToString());
@@ -168,6 +180,7 @@ namespace AudioVisualizerWidget
         public void LoadSettings()
         {
             // Variable definitions
+            parent.WidgetManager.LoadSetting(this, "DeviceID", out SelectedDeviceID);
             parent.WidgetManager.LoadSetting(this, "useGlobalTheme", out var useGlobalThemeStr);
             parent.WidgetManager.LoadSetting(this, "visualizerGraphType", out var visualizerGraphTypeStr);
             parent.WidgetManager.LoadSetting(this, "visualizerShowGrid", out var visualizerShowGridStr);
@@ -211,12 +224,12 @@ namespace AudioVisualizerWidget
 
         private string FindDefaultDevice()
         {
-            string deviceId = _audioDeviceSource.DefaultDevice ?? _audioDeviceSource.Devices[0]?.ID ?? string.Empty;
+            string deviceId = AudioDeviceSource.DefaultDevice ?? AudioDeviceSource.Devices[0]?.ID ?? string.Empty;
 
             return deviceId;
         }
 
-        private bool HandleInputDeviceChange(string newId)
+        public bool HandleInputDeviceChange(string newId)
         {
             // Null check
             if (string.IsNullOrEmpty(newId))
@@ -242,7 +255,7 @@ namespace AudioVisualizerWidget
             {
                 // Create new handler and analyzer
                 Console.WriteLine("HandleInputDeviceChange: Creating new handler...");
-                _audioDeviceHandler = _audioDeviceSource.CreateHandler(newId);
+                _audioDeviceHandler = AudioDeviceSource.CreateHandler(newId);
                 _audioDataAnalyzer = new AudioDataAnalyzer(_audioDeviceHandler);
 
                 // Hook into analyzer
@@ -260,6 +273,7 @@ namespace AudioVisualizerWidget
                 return false;
             }
 
+            SelectedDeviceID = newId;
             return true;
         }
 
