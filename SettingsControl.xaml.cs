@@ -41,7 +41,7 @@ namespace AudioVisualizerWidget
         {
             try
             {
-                if (deviceSelect.SelectedValue != null) Parent.HandleInputDeviceChange((string)deviceSelect.SelectedValue);
+                if (deviceSelect.SelectedValue != null && string.IsNullOrEmpty((string)deviceSelect.SelectedValue)) Parent.HandleInputDeviceChange((string)deviceSelect.SelectedValue);
                 Parent.VisualizerGraphType = (GraphType)graphSelect.SelectedValue;
                 Parent.UseGlobalTheme = globalThemeCheck.IsChecked == true;
                 Parent.UserVisualizerBgColor = ColorTranslator.FromHtml(bgColor.Text);
