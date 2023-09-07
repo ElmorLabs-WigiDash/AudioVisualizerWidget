@@ -52,6 +52,7 @@ namespace AudioVisualizerWidget
         public Color UserVisualizerBgColor;
         public Color UserVisualizerBarColor;
 
+        private bool noDevices = true;
         public string SelectedDeviceID = string.Empty;
         public AudioDeviceSource AudioDeviceSource = new AudioDeviceSource();
         private AudioDeviceHandler _audioDeviceHandler;
@@ -109,34 +110,42 @@ namespace AudioVisualizerWidget
                     Console.WriteLine("Initializer: Finding default device...");
 
                     defaultDeviceId = FindDefaultDevice();
-
-                    if (defaultDeviceId == string.Empty)
-                    {
-                        Console.WriteLine("Initializer: No supported devices found!");
-                        ClearWidget("No supported devices!");
-                        return;
-                    }
                 } else
                 {
                     Console.WriteLine("Initializer: Setting device...");
                     defaultDeviceId = SelectedDeviceID;
                 }
 
-                // Clear Widget
-                ClearWidget();
-
-                // Hook to default device
-                Console.WriteLine("Initializer: Found device: " + defaultDeviceId);
-                bool hookResult = HandleInputDeviceChange(defaultDeviceId);
-
-                if (!hookResult)
+                if (defaultDeviceId == string.Empty)
                 {
-                    ClearWidget("Could not hook into audio device!");
+                    noDevices = true;
                     return;
+                } else
+                {
+                    // Clear Widget
+                    ClearWidget();
+
+                    // Hook to default device
+                    Console.WriteLine("Initializer: Found device: " + defaultDeviceId);
+                    bool hookResult = HandleInputDeviceChange(defaultDeviceId);
+
+                    if (!hookResult)
+                    {
+                        SelectedDeviceID = string.Empty;
+                        ClearWidget("Could not hook into audio device!");
+                        return;
+                    } else
+                    {
+                        noDevices = false;
+                    }
                 }
+                
             } catch
             {
-
+                SelectedDeviceID = string.Empty;
+                Console.WriteLine("Initializer: Hooking in failed");
+                ClearWidget("No supported devices!");
+                return;
             }
         }
 
@@ -224,6 +233,8 @@ namespace AudioVisualizerWidget
 
         private string FindDefaultDevice()
         {
+            if (AudioDeviceSource.Devices.Count == 0) return string.Empty;
+
             string deviceId = AudioDeviceSource.DefaultDevice ?? AudioDeviceSource.Devices[0]?.ID ?? string.Empty;
 
             return deviceId;
@@ -329,7 +340,25 @@ namespace AudioVisualizerWidget
         public void DrawWidget()
         {
             // Don't draw if no data
-            if (_bitmapCurrent == null || _frequencyDataSeries.Count <= 0)
+            if (_bitmapCurrent == null)
+            {
+                ClearWidget();
+                return;
+            }
+
+            if (noDevices)
+            {
+                ClearWidget("No supported devices!");
+                return;
+            }
+
+            if (SelectedDeviceID == string.Empty)
+            {
+                ClearWidget("No device selected!");
+                return;
+            }
+
+            if (_frequencyDataSeries.Count <= 0)
             {
                 ClearWidget();
                 return;
@@ -470,7 +499,7 @@ namespace AudioVisualizerWidget
 
             WidgetUpdatedEventArgs e = new WidgetUpdatedEventArgs
             {
-                WidgetBitmap = _bitmapCurrent,
+                WidgetBitmap = new Bitmap(_bitmapCurrent),
                 WaitMax = 1000
             };
 
