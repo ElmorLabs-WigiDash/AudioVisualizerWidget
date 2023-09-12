@@ -52,7 +52,7 @@
             </Grid.ColumnDefinitions>
             <Label Content="Preferred Device:" FontSize="10" HorizontalAlignment="Stretch"></Label>
             <ComboBox x:Name="deviceSelect" Grid.Column="1" HorizontalAlignment="Stretch"
-                      IsEditable="True" IsReadOnly="True"></ComboBox>
+                      IsEditable="True" IsReadOnly="True" Focusable="False"></ComboBox>
         </Grid>
 
         <CheckBox x:Name="normalizeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Normalize Volume" FontSize="10"></CheckBox>
