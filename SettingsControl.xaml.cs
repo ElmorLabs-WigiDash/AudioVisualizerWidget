@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -24,9 +25,9 @@ namespace AudioVisualizerWidget
             graphSelect.SelectedValue = Parent.VisualizerGraphType;
 
             deviceSelect.ItemsSource = Parent.AudioDeviceSource.Devices;
-            deviceSelect.SelectedValuePath = "ID";
             deviceSelect.DisplayMemberPath = "DisplayName";
-            deviceSelect.SelectedValue = Parent.SelectedDeviceID;
+            deviceSelect.SelectionChanged += DeviceSelect_SelectionChanged;
+            deviceSelect.Text = Parent.PreferredDeviceName;
 
             globalThemeCheck.IsChecked = Parent.UseGlobalTheme;
             bgColor.Text = ColorTranslator.ToHtml(Parent.UserVisualizerBgColor);
@@ -37,11 +38,26 @@ namespace AudioVisualizerWidget
             axisCheck.IsChecked = Parent.VisualizerShowAxis;
         }
 
+        private string deviceId = string.Empty;
+        private string deviceName = string.Empty;
+
+        private void DeviceSelect_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (deviceSelect.SelectedValue is AudioDeviceInfo deviceInfo)
+            {
+                deviceId = deviceInfo.ID;
+                deviceName = deviceInfo.DisplayName;
+            }
+        }
+
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                if (deviceSelect.SelectedValue != null && string.IsNullOrEmpty((string)deviceSelect.SelectedValue)) Parent.HandleInputDeviceChange((string)deviceSelect.SelectedValue);
+                Parent.PreferredDeviceID = deviceId;
+                Parent.PreferredDeviceName = deviceName;
+                Parent.HandleInputDeviceChange(deviceId);
+
                 Parent.VisualizerGraphType = (GraphType)graphSelect.SelectedValue;
                 Parent.UseGlobalTheme = globalThemeCheck.IsChecked == true;
                 Parent.UserVisualizerBgColor = ColorTranslator.FromHtml(bgColor.Text);

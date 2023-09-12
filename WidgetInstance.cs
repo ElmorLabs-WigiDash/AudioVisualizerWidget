@@ -53,6 +53,8 @@ namespace AudioVisualizerWidget
         public Color UserVisualizerBarColor;
 
         private bool noDevices = true;
+        public string PreferredDeviceID = string.Empty;
+        public string PreferredDeviceName = string.Empty;
         public string SelectedDeviceID = string.Empty;
         public AudioDeviceSource AudioDeviceSource = new AudioDeviceSource();
         private AudioDeviceHandler _audioDeviceHandler;
@@ -173,7 +175,8 @@ namespace AudioVisualizerWidget
         /// </summary>
         public void SaveSettings()
         {
-            parent.WidgetManager.StoreSetting(this, "DeviceID", SelectedDeviceID);
+            parent.WidgetManager.StoreSetting(this, "DeviceID", PreferredDeviceID);
+            parent.WidgetManager.StoreSetting(this, "DeviceName", PreferredDeviceName);
             parent.WidgetManager.StoreSetting(this, "useGlobalTheme", UseGlobalTheme.ToString());
             parent.WidgetManager.StoreSetting(this, "visualizerGraphType", VisualizerGraphType.ToString());
             parent.WidgetManager.StoreSetting(this, "visualizerShowGrid", VisualizerShowGrid.ToString());
@@ -189,7 +192,8 @@ namespace AudioVisualizerWidget
         public void LoadSettings()
         {
             // Variable definitions
-            parent.WidgetManager.LoadSetting(this, "DeviceID", out SelectedDeviceID);
+            parent.WidgetManager.LoadSetting(this, "DeviceID", out PreferredDeviceID);
+            parent.WidgetManager.LoadSetting(this, "DeviceName", out PreferredDeviceName);
             parent.WidgetManager.LoadSetting(this, "useGlobalTheme", out var useGlobalThemeStr);
             parent.WidgetManager.LoadSetting(this, "visualizerGraphType", out var visualizerGraphTypeStr);
             parent.WidgetManager.LoadSetting(this, "visualizerShowGrid", out var visualizerShowGridStr);
@@ -234,6 +238,9 @@ namespace AudioVisualizerWidget
         private string FindDefaultDevice()
         {
             if (AudioDeviceSource.Devices.Count == 0) return string.Empty;
+
+            AudioDeviceInfo preferredDevice = AudioDeviceSource.Devices.FirstOrDefault(d => d.ID == PreferredDeviceID);
+            if (preferredDevice != null) return PreferredDeviceID;
 
             string deviceId = AudioDeviceSource.DefaultDevice ?? AudioDeviceSource.Devices[0]?.ID ?? string.Empty;
 
@@ -566,9 +573,15 @@ namespace AudioVisualizerWidget
             _audioDeviceHandler = null;
         }
 
+        private SettingsControl control;
         public UserControl GetSettingsControl()
         {
-            return new SettingsControl(this);
+            if (control == null)
+            {
+                control = new SettingsControl(this);
+            }
+
+            return control;
         }
     }
 }
