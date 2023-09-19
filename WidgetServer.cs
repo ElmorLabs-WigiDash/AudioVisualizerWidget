@@ -2,15 +2,17 @@
 using WigiDashWidgetFramework.WidgetUtility;
 using System;
 using System.Drawing;
+using System.IO;
 
 namespace AudioVisualizerWidget {
-    public partial class AudioVisualizerWidget : IWidgetObject {
-
+    public partial class AudioVisualizerWidget : IWidgetObject
+    {
         // Functionality
         public string ResourcePath;
 
         public WidgetError Load(string resource_path) {
             this.ResourcePath = resource_path;
+            thumb = new Bitmap(Path.Combine(ResourcePath, "thumb.png"));
             widgetPreview2x2 = new Bitmap(ResourcePath + "2x2.png");
             widgetPreview3x2 = new Bitmap(ResourcePath + "3x2.png");
             widgetPreview4x2 = new Bitmap(ResourcePath + "4x2.png");
@@ -36,6 +38,8 @@ namespace AudioVisualizerWidget {
             return widgetPreview5x1;
         }
 
+        public Bitmap WidgetThumbnail => thumb;
+
         public IWidgetInstance CreateWidgetInstance(WidgetSize widget_size, Guid instance_guid) {
             WidgetInstance widget_instance = new WidgetInstance(this, widget_size, instance_guid);
             return widget_instance;
@@ -47,6 +51,7 @@ namespace AudioVisualizerWidget {
 
         // Class specific
         public Random random;
+        private Bitmap thumb;
         private Bitmap widgetPreview2x2;
         private Bitmap widgetPreview3x2;
         private Bitmap widgetPreview4x2;
