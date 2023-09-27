@@ -11,10 +11,10 @@ namespace AudioVisualizerWidget
     /// </summary>
     public partial class SettingsControl : UserControl
     {
-        private WidgetInstance Parent;
+        private WidgetInstance _parent;
         public SettingsControl(WidgetInstance parent)
         {
-            Parent = parent;
+            this._parent = parent;
             Loaded += OnLoad;
             InitializeComponent();
         }
@@ -22,20 +22,43 @@ namespace AudioVisualizerWidget
         private void OnLoad(object sender, RoutedEventArgs e)
         {
             graphSelect.ItemsSource = Enum.GetValues(typeof(GraphType));
-            graphSelect.SelectedValue = Parent.VisualizerGraphType;
+            graphSelect.SelectedValue = _parent.VisualizerGraphType;
 
-            deviceSelect.ItemsSource = Parent.AudioDeviceSource.Devices;
+            deviceSelect.ItemsSource = _parent.AudioDeviceSource.Devices;
             deviceSelect.DisplayMemberPath = "DisplayName";
             deviceSelect.SelectionChanged += DeviceSelect_SelectionChanged;
-            deviceSelect.Text = Parent.PreferredDeviceName;
+            deviceSelect.Text = _parent.PreferredDeviceName;
 
-            globalThemeCheck.IsChecked = Parent.UseGlobalTheme;
-            bgColor.Text = ColorTranslator.ToHtml(Parent.UserVisualizerBgColor);
-            fgColor.Text = ColorTranslator.ToHtml(Parent.UserVisualizerBarColor);
-            vdSlider.Value = Parent.VisualizerDensity;
-            normalizeCheck.IsChecked = Parent.VisualizerNormalize;
-            gridCheck.IsChecked = Parent.VisualizerShowGrid;
-            axisCheck.IsChecked = Parent.VisualizerShowAxis;
+            globalThemeCheck.IsChecked = _parent.UseGlobalTheme;
+            bgColorSelect.Content = ColorTranslator.ToHtml(_parent.UserVisualizerBgColor);
+            fgColorSelect.Content = ColorTranslator.ToHtml(_parent.UserVisualizerBarColor);
+            vdSlider.Value = _parent.VisualizerDensity;
+            normalizeCheck.IsChecked = _parent.VisualizerNormalize;
+            gridCheck.IsChecked = _parent.VisualizerShowGrid;
+            axisCheck.IsChecked = _parent.VisualizerShowAxis;
+
+            bgColorSelect.IsEnabled = !_parent.UseGlobalTheme;
+            fgColorSelect.IsEnabled = !_parent.UseGlobalTheme;
+        }
+
+        private void fgColorSelect_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button caller)
+            {
+                Color defaultColor = ColorTranslator.FromHtml(caller.Content.ToString());
+                Color selectedColor = _parent.WidgetObject.WidgetManager.RequestColorSelection(defaultColor);
+                caller.Content = ColorTranslator.ToHtml(selectedColor);
+            }
+        }
+
+        private void bgColorSelect_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button caller)
+            {
+                Color defaultColor = ColorTranslator.FromHtml(caller.Content.ToString());
+                Color selectedColor = _parent.WidgetObject.WidgetManager.RequestColorSelection(defaultColor);
+                caller.Content = ColorTranslator.ToHtml(selectedColor);
+            }
         }
 
         private string deviceId = string.Empty;
@@ -54,25 +77,37 @@ namespace AudioVisualizerWidget
         {
             try
             {
-                Parent.PreferredDeviceID = deviceId;
-                Parent.PreferredDeviceName = deviceName;
-                Parent.HandleInputDeviceChange(deviceId);
+                _parent.PreferredDeviceID = deviceId;
+                _parent.PreferredDeviceName = deviceName;
+                _parent.HandleInputDeviceChange(deviceId);
 
-                Parent.VisualizerGraphType = (GraphType)graphSelect.SelectedValue;
-                Parent.UseGlobalTheme = globalThemeCheck.IsChecked == true;
-                Parent.UserVisualizerBgColor = ColorTranslator.FromHtml(bgColor.Text);
-                Parent.UserVisualizerBarColor = ColorTranslator.FromHtml(fgColor.Text);
-                Parent.VisualizerDensity = (int)vdSlider.Value;
-                Parent.VisualizerNormalize = normalizeCheck.IsChecked == true;
-                Parent.VisualizerShowGrid = gridCheck.IsChecked == true;
-                Parent.VisualizerShowAxis = axisCheck.IsChecked == true;
-                Parent.UpdateSettings();
-                Parent.SaveSettings();
+                _parent.VisualizerGraphType = (GraphType)graphSelect.SelectedValue;
+                _parent.UseGlobalTheme = globalThemeCheck.IsChecked == true;
+                _parent.VisualizerDensity = (int)vdSlider.Value;
+                _parent.VisualizerNormalize = normalizeCheck.IsChecked == true;
+                _parent.VisualizerShowGrid = gridCheck.IsChecked == true;
+                _parent.VisualizerShowAxis = axisCheck.IsChecked == true;
+
+                _parent.UserVisualizerBarColor = ColorTranslator.FromHtml(fgColorSelect.Content as string);
+                _parent.UserVisualizerBgColor = ColorTranslator.FromHtml(bgColorSelect.Content as string);
+
+                _parent.UpdateSettings();
+                _parent.SaveSettings();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
             }
+        }
+
+        private void globalThemeCheck_Click(object sender, RoutedEventArgs e)
+        {
+            _parent.UseGlobalTheme = globalThemeCheck.IsChecked ?? false;
+            bgColorSelect.IsEnabled = !_parent.UseGlobalTheme;
+            fgColorSelect.IsEnabled = !_parent.UseGlobalTheme;
+
+            _parent.UpdateSettings();
+            _parent.SaveSettings();
         }
     }
 }

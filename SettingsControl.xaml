@@ -9,23 +9,23 @@
     <StackPanel>
         <Grid Margin="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition></ColumnDefinition>
+                <ColumnDefinition Width="100"></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <Label Content="Background Color:" FontSize="10" HorizontalAlignment="Stretch"></Label>
-            <TextBox x:Name="bgColor" Grid.Column="1" HorizontalAlignment="Stretch"></TextBox>
+            <Label Content="Foreground" FontSize="10" HorizontalAlignment="Stretch"/>
+            <Button x:Name="fgColorSelect" Grid.Column="1" Click="fgColorSelect_Click" HorizontalAlignment="Stretch"></Button>
         </Grid>
 
         <Grid Margin="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition></ColumnDefinition>
+                <ColumnDefinition Width="100"></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <Label Content="Bar Color:" FontSize="10" HorizontalAlignment="Stretch"></Label>
-            <TextBox x:Name="fgColor" Grid.Column="1" HorizontalAlignment="Stretch"></TextBox>
+            <Label Content="Background" FontSize="10" HorizontalAlignment="Stretch"/>
+            <Button x:Name="bgColorSelect" Grid.Column="1" Click="bgColorSelect_Click" HorizontalAlignment="Stretch"></Button>
         </Grid>
 
-        <CheckBox x:Name="globalThemeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Use Global Theme" FontSize="10"></CheckBox>
+        <CheckBox x:Name="globalThemeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Use Global Theme" FontSize="10" Click="globalThemeCheck_Click"></CheckBox>
 
         <Grid Margin="2">
             <Grid.ColumnDefinitions>
