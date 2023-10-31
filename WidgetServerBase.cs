@@ -25,12 +25,12 @@ namespace AudioVisualizerWidget {
         }
         public string Author {
             get {
-                return "Defyworks";
+                return "defy.works";
             }
         }
         public string Website {
             get {
-                return "https://defyworks.com/";
+                return "https://defy.works/";
             }
         }
         public Version Version {
