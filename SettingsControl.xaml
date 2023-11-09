@@ -6,59 +6,59 @@
              xmlns:local="clr-namespace:AudioVisualizerWidget"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="225" d:Background="White">
-    <StackPanel>
-        <Grid Margin="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="100"></ColumnDefinition>
-                <ColumnDefinition></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <Label Content="Foreground" FontSize="10" HorizontalAlignment="Stretch"/>
-            <Button x:Name="fgColorSelect" Grid.Column="1" Click="fgColorSelect_Click" HorizontalAlignment="Stretch"></Button>
-        </Grid>
+  <StackPanel>
+    <CheckBox x:Name="globalThemeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Use Global Theme" FontSize="10" Click="globalThemeCheck_Click"></CheckBox>
 
-        <Grid Margin="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="100"></ColumnDefinition>
-                <ColumnDefinition></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <Label Content="Background" FontSize="10" HorizontalAlignment="Stretch"/>
-            <Button x:Name="bgColorSelect" Grid.Column="1" Click="bgColorSelect_Click" HorizontalAlignment="Stretch"></Button>
-        </Grid>
+    <Grid Margin="2">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="100"></ColumnDefinition>
+        <ColumnDefinition></ColumnDefinition>
+      </Grid.ColumnDefinitions>
+      <Label Content="Foreground" FontSize="10" HorizontalAlignment="Stretch"/>
+      <Button x:Name="fgColorSelect" Grid.Column="1" Click="fgColorSelect_Click" HorizontalAlignment="Stretch"></Button>
+    </Grid>
 
-        <CheckBox x:Name="globalThemeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Use Global Theme" FontSize="10" Click="globalThemeCheck_Click"></CheckBox>
+    <Grid Margin="2">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="100"></ColumnDefinition>
+        <ColumnDefinition></ColumnDefinition>
+      </Grid.ColumnDefinitions>
+      <Label Content="Background" FontSize="10" HorizontalAlignment="Stretch"/>
+      <Button x:Name="bgColorSelect" Grid.Column="1" Click="bgColorSelect_Click" HorizontalAlignment="Stretch"></Button>
+    </Grid>
 
-        <Grid Margin="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition></ColumnDefinition>
-                <ColumnDefinition></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <Label Content="Graph Type:" FontSize="10" HorizontalAlignment="Stretch"></Label>
-            <ComboBox x:Name="graphSelect" Grid.Column="1" HorizontalAlignment="Stretch"></ComboBox>
-        </Grid>
+    <Grid Margin="2">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition></ColumnDefinition>
+        <ColumnDefinition></ColumnDefinition>
+      </Grid.ColumnDefinitions>
+      <Label Content="Graph Type:" FontSize="10" HorizontalAlignment="Stretch"></Label>
+      <ComboBox x:Name="graphSelect" Grid.Column="1" HorizontalAlignment="Stretch"></ComboBox>
+    </Grid>
 
-        <Grid Margin="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition></ColumnDefinition>
-                <ColumnDefinition></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <Label Content="Visualizer Density:" FontSize="10" HorizontalAlignment="Stretch"></Label>
-            <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="4" Maximum="300"></Slider>
-        </Grid>
+    <Grid Margin="2">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition></ColumnDefinition>
+        <ColumnDefinition></ColumnDefinition>
+      </Grid.ColumnDefinitions>
+      <Label Content="Visualizer Density:" FontSize="10" HorizontalAlignment="Stretch"></Label>
+      <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="4" Maximum="300"></Slider>
+    </Grid>
 
-        <Grid Margin="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition></ColumnDefinition>
-                <ColumnDefinition></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <Label Content="Preferred Device:" FontSize="10" HorizontalAlignment="Stretch"></Label>
-            <ComboBox x:Name="deviceSelect" Grid.Column="1" HorizontalAlignment="Stretch"
+    <Grid Margin="2">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition></ColumnDefinition>
+        <ColumnDefinition></ColumnDefinition>
+      </Grid.ColumnDefinitions>
+      <Label Content="Preferred Device:" FontSize="10" HorizontalAlignment="Stretch"></Label>
+      <ComboBox x:Name="deviceSelect" Grid.Column="1" HorizontalAlignment="Stretch"
                       IsEditable="True" IsReadOnly="True" Focusable="False"></ComboBox>
-        </Grid>
+    </Grid>
 
-        <CheckBox x:Name="normalizeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Normalize Volume" FontSize="10"></CheckBox>
-        <CheckBox x:Name="gridCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Show Grid" FontSize="10"></CheckBox>
-        <CheckBox x:Name="axisCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Show Axis" FontSize="10"></CheckBox>
+    <CheckBox x:Name="normalizeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Normalize Volume" FontSize="10"></CheckBox>
+    <CheckBox x:Name="gridCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Show Grid" FontSize="10"></CheckBox>
+    <CheckBox x:Name="axisCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="Show Axis" FontSize="10"></CheckBox>
 
-        <Button Margin="2" Content="Save" Click="SaveButton_Click" HorizontalAlignment="Stretch"></Button>
-    </StackPanel>
+    <Button Margin="2" Content="Save" Click="SaveButton_Click" HorizontalAlignment="Stretch"></Button>
+  </StackPanel>
 </UserControl>
