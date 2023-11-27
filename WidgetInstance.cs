@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using ScottPlot;
 using MathNet.Numerics.Interpolation;
 using System.IO;
+using NLog;
 
 namespace AudioVisualizerWidget
 {
@@ -62,13 +63,10 @@ namespace AudioVisualizerWidget
 
         private Dictionary<int, double> _frequencyDataSeries = new Dictionary<int, double>();
 
+        private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
+
         public WidgetInstance(AudioVisualizerWidget parent, WidgetSize widget_size, Guid instance_guid)
         {
-            // Open Console if DEBUG
-#if DEBUG
-            AllocConsole();
-#endif
-
             // Global
             this.parent = parent;
             this.Guid = instance_guid;
@@ -109,12 +107,12 @@ namespace AudioVisualizerWidget
                 if (string.IsNullOrEmpty(SelectedDeviceID))
                 {
                     // Get default device
-                    Console.WriteLine("Initializer: Finding default device...");
+                    Logger.Debug("Initializer: Finding default device...");
 
                     defaultDeviceId = FindDefaultDevice();
                 } else
                 {
-                    Console.WriteLine("Initializer: Setting device...");
+                    Logger.Debug("Initializer: Setting device...");
                     defaultDeviceId = SelectedDeviceID;
                 }
 
@@ -128,7 +126,7 @@ namespace AudioVisualizerWidget
                     ClearWidget();
 
                     // Hook to default device
-                    Console.WriteLine("Initializer: Found device: " + defaultDeviceId);
+                    Logger.Debug("Initializer: Found device: " + defaultDeviceId);
                     bool hookResult = HandleInputDeviceChange(defaultDeviceId);
 
                     if (!hookResult)
@@ -145,7 +143,7 @@ namespace AudioVisualizerWidget
             } catch
             {
                 SelectedDeviceID = string.Empty;
-                Console.WriteLine("Initializer: Hooking in failed");
+                Logger.Debug("Initializer: Hooking in failed");
                 ClearWidget("No supported devices!");
                 return;
             }
@@ -252,19 +250,19 @@ namespace AudioVisualizerWidget
             // Null check
             if (string.IsNullOrEmpty(newId))
             {
-                Console.WriteLine("HandleInputDeviceChange: Invalid device ID!");
+                Logger.Debug("HandleInputDeviceChange: Invalid device ID!");
                 return false;
             }
 
             // Dispose any previous handlers
-            Console.WriteLine("HandleInputDeviceChange: Disposing previous handler...");
+            Logger.Debug("HandleInputDeviceChange: Disposing previous handler...");
             _audioDeviceHandler?.Dispose();
             _audioDeviceHandler = null;
 
             // Dispose any previous analyzers
             if (_audioDataAnalyzer != null)
             {
-                Console.WriteLine("HandleInputDeviceChange: Disposing previous analyzer...");
+                Logger.Debug("HandleInputDeviceChange: Disposing previous analyzer...");
                 _audioDataAnalyzer.Update -= Update;
                 _audioDataAnalyzer = null;
             }
@@ -272,19 +270,19 @@ namespace AudioVisualizerWidget
             try
             {
                 // Create new handler and analyzer
-                Console.WriteLine("HandleInputDeviceChange: Creating new handler...");
+                Logger.Debug("HandleInputDeviceChange: Creating new handler...");
                 _audioDeviceHandler = AudioDeviceSource.CreateHandler(newId);
                 _audioDataAnalyzer = new AudioDataAnalyzer(_audioDeviceHandler);
 
                 // Hook into analyzer
-                Console.WriteLine("HandleInputDeviceChange: Hooking into analyzer...");
+                Logger.Debug("HandleInputDeviceChange: Hooking into analyzer...");
                 _audioDataAnalyzer.Update += Update;
 
                 // Initialize data storage
                 InitDataStorage(_audioDataAnalyzer, _audioDeviceHandler);
 
                 // Start handler
-                Console.WriteLine("HandleInputDeviceChange: Starting handler...");
+                Logger.Debug("HandleInputDeviceChange: Starting handler...");
                 _audioDeviceHandler.Start();
             } catch
             {
@@ -297,7 +295,7 @@ namespace AudioVisualizerWidget
 
         private void InitDataStorage(AudioDataAnalyzer analyzer, AudioDeviceHandler handler)
         {
-            Console.WriteLine("InitDataStorage: Initializing data storage...");
+            Logger.Debug("InitDataStorage: Initializing data storage...");
             _frequencyDataSeries = new Dictionary<int, double>(analyzer.FftDataPoints);
             _frequencyDataSeries.Append(analyzer.FftIndices, analyzer.DbValues);
         }

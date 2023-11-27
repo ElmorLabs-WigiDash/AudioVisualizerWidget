@@ -1,5 +1,6 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,9 +35,11 @@ namespace AudioVisualizerWidget
 
         public event EventHandler DataReceived;
 
+        private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
+
         public AudioDeviceHandler(MMDevice device)
         {
-            Console.WriteLine($"AudioDeviceHandler: Device: {device.FriendlyName}");
+            Logger.Debug($"AudioDeviceHandler: Device: {device.FriendlyName}");
             _token = _cts.Token;
             _device = device;
 
@@ -44,18 +47,18 @@ namespace AudioVisualizerWidget
 
             SamplesPerSecond = _waveFormat.SampleRate;
 
-            Console.WriteLine($"AudioDeviceHandler: Sample rate: {SamplesPerSecond}");
+            Logger.Debug($"AudioDeviceHandler: Sample rate: {SamplesPerSecond}");
 
             BufferSize = SamplesPerSecond * 50 / 1000; // 50ms buffer
 
-            Console.WriteLine($"AudioDeviceHandler: Buffer size: {BufferSize}");
+            Logger.Debug($"AudioDeviceHandler: Buffer size: {BufferSize}");
 
             _input = new double[BufferSize];
             _inputBack = new double[BufferSize];
             
             //_currentBuffer = new double[(int)(BufferSize)];
 
-            Console.WriteLine("AudioDeviceHandler: Hooking into audio device...");
+            Logger.Debug("AudioDeviceHandler: Hooking into audio device...");
 
             var capture = new WasapiLoopbackCapture(device);
             capture.DataAvailable += DataAvailable;
@@ -66,13 +69,13 @@ namespace AudioVisualizerWidget
             _reader = new SampleReader(_waveFormat);
 
             // Play silence to initialize the audio device
-            Console.WriteLine("AudioDeviceHandler: Playing Silence...");
+            Logger.Debug("AudioDeviceHandler: Playing Silence...");
             var silence = new SilenceProvider(_waveFormat).ToSampleProvider();
             _waveOut = new WaveOutEvent();
             _waveOut.Init(silence);
             _waveOut.Play();
 
-            Console.WriteLine("AudioDeviceHandler: Starting audio capture...");
+            Logger.Debug("AudioDeviceHandler: Starting audio capture...");
             _ = Task.Run(ProcessData, _cts.Token);
         }
 
@@ -80,7 +83,7 @@ namespace AudioVisualizerWidget
         {
             if (_capture.CaptureState == CaptureState.Stopped)
             {
-                Console.WriteLine("AudioDeviceHandler: Starting Capture...");
+                Logger.Debug("AudioDeviceHandler: Starting Capture...");
                 _capture.StartRecording();
                 _waveOut?.Play();
             }
@@ -90,7 +93,7 @@ namespace AudioVisualizerWidget
         {
             if (_capture.CaptureState == CaptureState.Capturing)
             {
-                Console.WriteLine("AudioDeviceHandler: Stopping Capture...");
+                Logger.Debug("AudioDeviceHandler: Stopping Capture...");
                 _capture.StopRecording();
                 _waveOut?.Stop();
             }
