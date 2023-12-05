@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NLog;
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Windows;
@@ -11,6 +12,7 @@ namespace AudioVisualizerWidget
     /// </summary>
     public partial class SettingsControl : UserControl
     {
+        private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
         private WidgetInstance _parent;
         public SettingsControl(WidgetInstance parent)
         {
@@ -96,7 +98,7 @@ namespace AudioVisualizerWidget
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                Logger.Error(ex, "Failed to run save settings from settings control");
             }
         }
 

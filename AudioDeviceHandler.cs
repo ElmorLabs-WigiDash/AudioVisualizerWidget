@@ -1,6 +1,7 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NLog;
+using NLog.Fluent;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +16,7 @@ namespace AudioVisualizerWidget
         private CancellationTokenSource _cts = new CancellationTokenSource();
         private CancellationToken _token;
         private AutoResetEvent _processEvt = new AutoResetEvent(false);
-        private WasapiCapture _capture;
+        private WasapiLoopbackCaptureAlt _capture;
         private MMDevice _device;
         private WaveFormat _waveFormat;
         private SampleReader _reader;
@@ -43,7 +44,13 @@ namespace AudioVisualizerWidget
             _token = _cts.Token;
             _device = device;
 
-            _waveFormat = device.AudioClient.MixFormat.AsStandardWaveFormat();
+            _waveFormat = GetSupportedWaveFormat(device);
+
+            if (_waveFormat == null)
+            {
+                Logger.Error("Could not get a supported waveformat!");
+                return;
+            }
 
             SamplesPerSecond = _waveFormat.SampleRate;
 
@@ -52,6 +59,7 @@ namespace AudioVisualizerWidget
             BufferSize = SamplesPerSecond * 50 / 1000; // 50ms buffer
 
             Logger.Debug($"AudioDeviceHandler: Buffer size: {BufferSize}");
+            Logger.Debug($"Derived Waveform: {_waveFormat}");
 
             _input = new double[BufferSize];
             _inputBack = new double[BufferSize];
@@ -60,10 +68,11 @@ namespace AudioVisualizerWidget
 
             Logger.Debug("AudioDeviceHandler: Hooking into audio device...");
 
-            var capture = new WasapiLoopbackCapture(device);
+            var capture = new WasapiLoopbackCaptureAlt(device);
+            capture.WaveFormat = _waveFormat;
+            capture.ShareMode = AudioClientShareMode.Shared;
             capture.DataAvailable += DataAvailable;
             capture.RecordingStopped += RecordingStopped;
-
             _capture = capture;
 
             _reader = new SampleReader(_waveFormat);
@@ -77,6 +86,29 @@ namespace AudioVisualizerWidget
 
             Logger.Debug("AudioDeviceHandler: Starting audio capture...");
             _ = Task.Run(ProcessData, _cts.Token);
+        }
+
+        private WaveFormat GetSupportedWaveFormat(MMDevice device)
+        {
+            WaveFormat initialFormat = device.AudioClient.MixFormat;
+            WaveFormat returnFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, 2);
+
+            if (!device.AudioClient.IsFormatSupported(AudioClientShareMode.Shared, returnFormat))
+            {
+                returnFormat = initialFormat.AsStandardWaveFormat();
+
+                if (!device.AudioClient.IsFormatSupported(AudioClientShareMode.Shared, returnFormat))
+                {
+                    returnFormat = new WaveFormat(initialFormat.SampleRate, initialFormat.BitsPerSample, initialFormat.Channels);
+
+                    if (!device.AudioClient.IsFormatSupported(AudioClientShareMode.Shared, returnFormat))
+                    {
+                        return null;
+                    }
+                }
+            }
+
+            return returnFormat;
         }
 
         public void Start()
@@ -156,7 +188,8 @@ namespace AudioVisualizerWidget
 
             _waveOut?.Dispose();
 
-            try { _cts?.Cancel(); } catch { }
+            try { _cts?.Cancel(); }
+            catch (Exception ex) { Logger.Error(ex, "Could not cancel capture task"); }
         }
     }
 }

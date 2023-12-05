@@ -142,10 +142,10 @@ namespace AudioVisualizerWidget
                     }
                 }
                 
-            } catch
+            } catch (Exception ex)
             {
                 SelectedDeviceID = string.Empty;
-                Logger.Debug("Initializer: Hooking in failed");
+                Logger.Error(ex, "Initializer: Hooking in failed");
                 ClearWidget("No supported devices!");
                 return;
             }
@@ -231,7 +231,7 @@ namespace AudioVisualizerWidget
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Failed to load settings.");
+                //MessageBox.Show(ex.Message);
             }
         }
 
@@ -304,8 +304,9 @@ namespace AudioVisualizerWidget
                 // Start handler
                 Logger.Debug("HandleInputDeviceChange: Starting handler...");
                 _audioDeviceHandler.Start();
-            } catch
+            } catch (Exception ex)
             {
+                Logger.Error(ex, "An error occurred while trying to hook into the audio device handler.");
                 return false;
             }
 
