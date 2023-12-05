@@ -15,6 +15,7 @@ using ScottPlot;
 using MathNet.Numerics.Interpolation;
 using System.IO;
 using NLog;
+using NLog.Fluent;
 
 namespace AudioVisualizerWidget
 {
@@ -118,6 +119,7 @@ namespace AudioVisualizerWidget
 
                 if (defaultDeviceId == string.Empty)
                 {
+                    Logger.Debug("Initializer: No supported device found");
                     noDevices = true;
                     return;
                 } else
@@ -227,20 +229,38 @@ namespace AudioVisualizerWidget
                 UpdateSettings();
                 SaveSettings();
             }
-            catch (Exception _)
+            catch (Exception ex)
             {
-                //MessageBox.Show(ex.Message);
+                Logger.Error(ex, "Failed to load settings.");
             }
         }
 
         private string FindDefaultDevice()
         {
-            if (AudioDeviceSource.Devices.Count == 0) return string.Empty;
+            Logger.Debug("Looking for default device");
+            if (AudioDeviceSource.Devices.Count == 0)
+            {
+                Logger.Debug("No devices found in source");
+                return string.Empty;
+            }
 
             AudioDeviceInfo preferredDevice = AudioDeviceSource.Devices.FirstOrDefault(d => d.ID == PreferredDeviceID);
-            if (preferredDevice != null) return PreferredDeviceID;
+            if (preferredDevice != null)
+            {
+                Logger.Debug($"Found preferred device: {preferredDevice.DisplayName}, {{{preferredDevice.ID}}}");
+                return PreferredDeviceID;
+            }
 
             string deviceId = AudioDeviceSource.DefaultDevice ?? AudioDeviceSource.Devices[0]?.ID ?? string.Empty;
+
+            if (string.IsNullOrEmpty(deviceId))
+            {
+                Logger.Debug("No default device found");
+                return string.Empty;
+            } else
+            {
+                Logger.Debug($"Found default device: {deviceId}");
+            }
 
             return deviceId;
         }

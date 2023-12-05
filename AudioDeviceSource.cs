@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using NLog;
 
 namespace AudioVisualizerWidget
 {
@@ -19,6 +20,7 @@ namespace AudioVisualizerWidget
         public event EventHandler DevicesChanged;
 
         public string DefaultDevice { get; private set; }
+        private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
         public AudioDeviceSource()
         {
@@ -35,16 +37,19 @@ namespace AudioVisualizerWidget
 
         private void RefreshDevices()
         {
+            Logger.Info("Refreshing Audio Devices");
             if (!_dispatcher.CheckAccess())
             {
                 _dispatcher.BeginInvoke((Action)RefreshDevices);
                 return;
             }
+
             DefaultDevice = GetDefaultDevice();
 
             var deviceMap = Devices.ToDictionary(d => d.ID, d => d);
             var presentDevices = new HashSet<string>();
 
+            Logger.Debug("Enumerating Active Audio Devices");
             foreach (var d in _enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
             {
                 presentDevices.Add(d.ID);
@@ -57,6 +62,11 @@ namespace AudioVisualizerWidget
                     Devices.Add(new AudioDeviceInfo(d));
                 }
                 d.Dispose();
+            }
+
+            if (presentDevices.Count == 0)
+            {
+                Logger.Warn("No Active Audio Devices Found");
             }
 
             for (int i = Devices.Count - 1; i >= 0; i--)
@@ -72,12 +82,15 @@ namespace AudioVisualizerWidget
 
         private string GetDefaultDevice()
         {
+            Logger.Info("Getting Default Audio Device");
             if (!_enumerator.HasDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia))
             {
+                Logger.Warn("No Default Audio Render Endpoint");
                 return null;
             }
             using (var device = _enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia))
             {
+                Logger.Info($"Default Audio Device: {device.ID}");
                 return device.ID;
             }
         }
