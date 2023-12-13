@@ -20,17 +20,17 @@ namespace AudioVisualizerWidget {
         }
         public string Description {
             get {
-                return "An audio visualizer widget";
+                return "An audio visualizer";
             }
         }
         public string Author {
             get {
-                return "defy.works";
+                return "ElmorLabs";
             }
         }
         public string Website {
             get {
-                return "https://defy.works/";
+                return "https://elmorlabs.com/";
             }
         }
         public Version Version {
