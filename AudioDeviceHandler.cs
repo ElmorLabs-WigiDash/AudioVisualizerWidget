@@ -116,7 +116,7 @@ namespace AudioVisualizerWidget
             if (_capture.CaptureState == CaptureState.Stopped)
             {
                 Logger.Debug("AudioDeviceHandler: Starting Capture...");
-                _capture.StartRecording();
+                _capture?.StartRecording();
                 _waveOut?.Play();
             }
         }
@@ -126,7 +126,7 @@ namespace AudioVisualizerWidget
             if (_capture.CaptureState == CaptureState.Capturing)
             {
                 Logger.Debug("AudioDeviceHandler: Stopping Capture...");
-                _capture.StopRecording();
+                _capture?.StopRecording();
                 _waveOut?.Stop();
             }
         }
@@ -176,16 +176,11 @@ namespace AudioVisualizerWidget
 
         public void Dispose()
         {
-            if (_capture.CaptureState == CaptureState.Stopped)
-            {
-                _capture?.Dispose();
-                _device?.Dispose();
-            }
-            else
-            {
-                Stop();
-            }
+            Stop();
 
+            _capture?.Dispose();
+            _device?.Dispose();
+            
             _waveOut?.Dispose();
 
             try { _cts?.Cancel(); }
