@@ -28,9 +28,9 @@ namespace AudioVisualizerWidget
         static extern bool AllocConsole();
 
         // Threading Variables
-        private bool _pauseDrawing = false;
+        private volatile bool _pauseDrawing = false;
         private readonly Mutex _bitmapLock = new Mutex();
-        private const int mutex_timeout = 100;
+        private const int mutex_timeout = 1000;
         private volatile bool run_task;
 
         // Variables
@@ -91,7 +91,7 @@ namespace AudioVisualizerWidget
             {
                 while (run_task)
                 {
-                    DrawWidget();
+                    if(!_pauseDrawing) DrawWidget();
 
                     // Limit to 10 FPS
                     Thread.Sleep(100);
@@ -103,7 +103,7 @@ namespace AudioVisualizerWidget
         {
             try
             {
-                string defaultDeviceId;
+                string defaultDeviceId = string.Empty;
 
                 if (string.IsNullOrEmpty(SelectedDeviceID))
                 {
@@ -117,10 +117,11 @@ namespace AudioVisualizerWidget
                     defaultDeviceId = SelectedDeviceID;
                 }
 
-                if (defaultDeviceId == string.Empty)
+                if (string.IsNullOrEmpty(defaultDeviceId))
                 {
                     Logger.Debug("Initializer: No supported device found");
                     noDevices = true;
+                    ClearWidget("No supported device found");
                     return;
                 } else
                 {
@@ -304,6 +305,7 @@ namespace AudioVisualizerWidget
                 // Start handler
                 Logger.Debug("HandleInputDeviceChange: Starting handler...");
                 _audioDeviceHandler.Start();
+
             } catch (Exception ex)
             {
                 Logger.Error(ex, "An error occurred while trying to hook into the audio device handler.");
@@ -347,7 +349,7 @@ namespace AudioVisualizerWidget
                 {
                     g.Clear(_visualizerBgColor);
 
-                    if (status != "")
+                    if (!string.IsNullOrEmpty(status))
                     {
                         RectangleF layoutRectangle =
                             new RectangleF(0, 0, WidgetSize.ToSize().Width, WidgetSize.ToSize().Height);
@@ -368,7 +370,7 @@ namespace AudioVisualizerWidget
             // Don't draw if no data
             if (_bitmapCurrent == null)
             {
-                ClearWidget();
+                //ClearWidget();
                 return;
             }
 
@@ -378,7 +380,7 @@ namespace AudioVisualizerWidget
                 return;
             }
 
-            if (SelectedDeviceID == string.Empty)
+            if (string.IsNullOrEmpty(SelectedDeviceID))
             {
                 ClearWidget("No device selected!");
                 return;
@@ -391,87 +393,84 @@ namespace AudioVisualizerWidget
             }
 
             // Check drawing conditions and frequency data values
-            if (!_pauseDrawing)
+            if (_bitmapLock.WaitOne(mutex_timeout))
             {
-                if (_bitmapLock.WaitOne(mutex_timeout))
+                using (Graphics g = Graphics.FromImage(_bitmapCurrent))
                 {
-                    using (Graphics g = Graphics.FromImage(_bitmapCurrent))
-                    {
-                        // Set smoothing mode
-                        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    // Set smoothing mode
+                    //g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-                        // Clear board to draw visualizer
-                        g.Clear(_visualizerBgColor);
-                    }
+                    // Clear board to draw visualizer
+                    g.Clear(_visualizerBgColor);
+                }
 
-                    lock (_frequencyDataSeries)
+                lock (_frequencyDataSeries)
+                {
+                    lock (_frequencyDataSeries.Keys)
                     {
-                        lock (_frequencyDataSeries.Keys)
+                        lock (_frequencyDataSeries.Values)
                         {
-                            lock (_frequencyDataSeries.Values)
+                            // If _frequencyDataSeries has Infinity or NaN values, set them to 0
+                            foreach (var key in _frequencyDataSeries.Keys.ToList())
                             {
-                                // If _frequencyDataSeries has Infinity or NaN values, set them to 0
-                                foreach (var key in _frequencyDataSeries.Keys.ToList())
+                                if (double.IsInfinity(_frequencyDataSeries[key]) || double.IsNaN(_frequencyDataSeries[key]))
                                 {
-                                    if (double.IsInfinity(_frequencyDataSeries[key]) || double.IsNaN(_frequencyDataSeries[key]))
-                                    {
-                                        _frequencyDataSeries[key] = 0;
-                                    }
+                                    _frequencyDataSeries[key] = 0;
                                 }
-
-                                // Draw graph in log10 scale between 20Hz and 25kHz. Y axis is from -200 to 0.
-                                var plt = new Plot(WidgetSize.ToSize().Width, WidgetSize.ToSize().Height);
-
-                                var xAxisData = Tools.Log10(_frequencyDataSeries.Keys.Select(i => (double)i).ToArray());
-                                var yAxisData = _frequencyDataSeries.Values.Select(d => d + 200 > 190 ? 0 : d + 200).ToArray();
-
-                                var plotData = GetInterpolatedData(xAxisData, yAxisData, VisualizerDensity);
-
-                                switch (VisualizerGraphType)
-                                {
-                                    default:
-                                    case GraphType.BarGraph:
-                                        var bars = plt.AddBar(plotData.Item2, _visualizerBarColor);
-                                        bars.BorderLineWidth = 0;
-                                        bars.BarWidth = 1.05;
-                                        break;
-
-                                    case GraphType.LineGraph:
-                                        plt.AddScatter(plotData.Item1, plotData.Item2, _visualizerBarColor, markerShape: MarkerShape.none, lineWidth: 2);
-                                        break;
-                                }
-
-                                plt.Style(dataBackground: _visualizerBgColor, figureBackground: _visualizerBgColor);
-
-                                plt.SetAxisLimitsY(0, 200);
-
-                                if (VisualizerNormalize)
-                                {
-                                    plt.AxisAuto(0, 0);
-                                }
-                                else
-                                {
-                                    plt.AxisAutoX(0);
-                                }
-
-                                plt.XAxis.Color(_visualizerBarColor);
-                                plt.XAxis2.Color(_visualizerBarColor);
-                                plt.YAxis.Color(_visualizerBarColor);
-                                plt.YAxis2.Color(_visualizerBarColor);
-                                plt.Grid(VisualizerShowGrid);
-
-                                plt.Frameless(!VisualizerShowAxis);
-
-                                plt.Render(_bitmapCurrent);
                             }
+
+                            // Draw graph in log10 scale between 20Hz and 25kHz. Y axis is from -200 to 0.
+                            var plt = new Plot(WidgetSize.ToSize().Width, WidgetSize.ToSize().Height);
+
+                            var xAxisData = Tools.Log10(_frequencyDataSeries.Keys.Select(i => (double)i).ToArray());
+                            var yAxisData = _frequencyDataSeries.Values.Select(d => d + 200 > 190 ? 0 : d + 200).ToArray();
+
+                            var plotData = GetInterpolatedData(xAxisData, yAxisData, VisualizerDensity);
+
+                            switch (VisualizerGraphType)
+                            {
+                                default:
+                                case GraphType.BarGraph:
+                                    var bars = plt.AddBar(plotData.Item2, _visualizerBarColor);
+                                    bars.BorderLineWidth = 0;
+                                    bars.BarWidth = 1.05;
+                                    break;
+
+                                case GraphType.LineGraph:
+                                    plt.AddScatter(plotData.Item1, plotData.Item2, _visualizerBarColor, markerShape: MarkerShape.none, lineWidth: 2);
+                                    break;
+                            }
+
+                            plt.Style(dataBackground: _visualizerBgColor, figureBackground: _visualizerBgColor);
+
+                            plt.SetAxisLimitsY(0, 200);
+
+                            if (VisualizerNormalize)
+                            {
+                                plt.AxisAuto(0, 0);
+                            }
+                            else
+                            {
+                                plt.AxisAutoX(0);
+                            }
+
+                            plt.XAxis.Color(_visualizerBarColor);
+                            plt.XAxis2.Color(_visualizerBarColor);
+                            plt.YAxis.Color(_visualizerBarColor);
+                            plt.YAxis2.Color(_visualizerBarColor);
+                            plt.Grid(VisualizerShowGrid);
+
+                            plt.Frameless(!VisualizerShowAxis);
+
+                            plt.Render(_bitmapCurrent);
                         }
                     }
-                    // Flush
-                    UpdateWidget();
-
-                    // Release bitmap lock
-                    _bitmapLock.ReleaseMutex();
                 }
+                // Flush
+                UpdateWidget();
+
+                // Release bitmap lock
+                _bitmapLock.ReleaseMutex();
 
             }
         }
@@ -525,7 +524,8 @@ namespace AudioVisualizerWidget
 
             WidgetUpdatedEventArgs e = new WidgetUpdatedEventArgs
             {
-                WidgetBitmap = new Bitmap(_bitmapCurrent),
+                //WidgetBitmap = new Bitmap(_bitmapCurrent),
+                WidgetBitmap = _bitmapCurrent,
                 WaitMax = 1000
             };
 
@@ -574,14 +574,8 @@ namespace AudioVisualizerWidget
         {
 
             Init();
-
             _pauseDrawing = false;
 
-            /*Task.Run(async () =>
-            {
-                //await Task.Delay(1000);
-
-            });*/
         }
 
         public void Dispose()
