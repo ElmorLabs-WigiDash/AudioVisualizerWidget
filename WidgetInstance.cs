@@ -580,10 +580,11 @@ namespace AudioVisualizerWidget
 
         public void Dispose()
         {
+            bool mutex_result = _bitmapLock.WaitOne(mutex_timeout);
             run_task = false;
             _pauseDrawing = true;
-            _audioDeviceHandler?.Dispose();
             _audioDeviceHandler = null;
+            if (mutex_result) _bitmapLock.ReleaseMutex();
         }
 
         private SettingsControl control;
