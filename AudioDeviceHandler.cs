@@ -123,7 +123,7 @@ namespace AudioVisualizerWidget
 
         public void Stop()
         {
-            if (_capture.CaptureState == CaptureState.Capturing)
+            if (_capture?.CaptureState == CaptureState.Capturing)
             {
                 Logger.Debug("AudioDeviceHandler: Stopping Capture...");
                 _capture?.StopRecording();
