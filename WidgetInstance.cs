@@ -277,7 +277,7 @@ namespace AudioVisualizerWidget
 
             // Dispose any previous handlers
             Logger.Debug("HandleInputDeviceChange: Disposing previous handler...");
-            _audioDeviceHandler?.Dispose();
+            //_audioDeviceHandler?.Dispose();
             _audioDeviceHandler = null;
 
             // Dispose any previous analyzers
