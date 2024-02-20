@@ -5,7 +5,7 @@ using System.Drawing;
 using System.IO;
 
 namespace AudioVisualizerWidget {
-    public partial class AudioVisualizerWidget : IWidgetObject
+    public partial class AudioVisualizerWidgetServer : IWidgetObject
     {
         // Functionality
         public string ResourcePath;
@@ -59,7 +59,7 @@ namespace AudioVisualizerWidget {
         private Bitmap widgetPreview5x1;
         private Bitmap widgetPreview5x2;
 
-        public AudioVisualizerWidget() {
+        public AudioVisualizerWidgetServer() {
             
             random = new Random();
 

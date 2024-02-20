@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Drawing;
 
 namespace AudioVisualizerWidget {
-    public partial class AudioVisualizerWidget : IWidgetObject {
+    public partial class AudioVisualizerWidgetServer : IWidgetObject {
 
         // Identity
         public Guid Guid {

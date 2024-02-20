@@ -8,7 +8,7 @@ namespace AudioVisualizerWidget {
     public partial class WidgetInstance : IWidgetInstance {
 
         // Identity
-        private AudioVisualizerWidget parent;
+        private AudioVisualizerWidgetServer parent;
         public IWidgetObject WidgetObject
         { 
             get { 

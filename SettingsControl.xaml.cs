@@ -27,7 +27,7 @@ namespace AudioVisualizerWidget
             graphSelect.SelectedValue = _parent.VisualizerGraphType;
 
             deviceSelect.ItemsSource = _parent.AudioDeviceSource.Devices;
-            deviceSelect.DisplayMemberPath = "DisplayName";
+            deviceSelect.DisplayMemberPath = @"DisplayName";
             deviceSelect.SelectionChanged += DeviceSelect_SelectionChanged;
             deviceSelect.Text = _parent.PreferredDeviceName;
 

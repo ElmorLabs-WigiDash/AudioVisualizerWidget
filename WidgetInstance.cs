@@ -66,7 +66,7 @@ namespace AudioVisualizerWidget
 
         private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
-        public WidgetInstance(AudioVisualizerWidget parent, WidgetSize widget_size, Guid instance_guid)
+        public WidgetInstance(AudioVisualizerWidgetServer parent, WidgetSize widget_size, Guid instance_guid)
         {
             // Global
             this.parent = parent;
