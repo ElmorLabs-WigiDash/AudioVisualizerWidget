@@ -31,13 +31,22 @@ namespace AudioVisualizerWidget
 
         public event EventHandler Update;
 
-        private double sampleRate = 44100;
+        private double sampleRate;
 
         private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
         public AudioDataAnalyzer(AudioDeviceHandler handler)
         {
             _handler = handler;
+
+            if(_handler == null) {
+                throw new Exception("AudioDataAnalyzer handler invalid");
+            }
+
+            if(_handler.SamplesPerSecond < 44100)
+            {
+                throw new Exception($"AudioDataAnalyzer SampleRate Error ({_handler.SamplesPerSecond})");
+            }
 
             // On Windows, sample rate could be pretty much anything and FFT requires power-of-2 window size
             // So we need to pick sufficient window size based on sample rate

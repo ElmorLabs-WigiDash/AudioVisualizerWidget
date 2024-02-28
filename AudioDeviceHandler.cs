@@ -1,13 +1,11 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NLog;
-using NLog.Fluent;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 
 namespace AudioVisualizerWidget
 {
@@ -88,23 +86,48 @@ namespace AudioVisualizerWidget
             _ = Task.Run(ProcessData, _cts.Token);
         }
 
+        private List<WaveFormat> SupportedFormats = new List<WaveFormat>
+        {
+            WaveFormat.CreateIeeeFloatWaveFormat(44100, 2),
+            WaveFormat.CreateIeeeFloatWaveFormat(48000, 2)/*,
+            WaveFormat.CreateIeeeFloatWaveFormat(44100, 6),
+            WaveFormat.CreateIeeeFloatWaveFormat(48000, 6),
+            WaveFormat.CreateIeeeFloatWaveFormat(44100, 8),
+            WaveFormat.CreateIeeeFloatWaveFormat(48000, 8)*/
+        };
+
         private WaveFormat GetSupportedWaveFormat(MMDevice device)
         {
-            WaveFormat initialFormat = device.AudioClient.MixFormat;
-            WaveFormat returnFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, 2);
+            WaveFormat deviceMixFormat = device.AudioClient.MixFormat;
+            WaveFormat returnFormat = null;
 
-            if (!device.AudioClient.IsFormatSupported(AudioClientShareMode.Shared, returnFormat))
+            Logger.Debug($"GetSupportedWaveFormat: Device MixFormat: {deviceMixFormat}");
+
+            int i = 0;
+            while(returnFormat == null && i<SupportedFormats.Count)
             {
-                returnFormat = initialFormat.AsStandardWaveFormat();
-
-                if (!device.AudioClient.IsFormatSupported(AudioClientShareMode.Shared, returnFormat))
+                WaveFormat testFormat = SupportedFormats[i];
+                if (device.AudioClient.IsFormatSupported(AudioClientShareMode.Shared, testFormat))
                 {
-                    returnFormat = new WaveFormat(initialFormat.SampleRate, initialFormat.BitsPerSample, initialFormat.Channels);
+                    returnFormat = testFormat;
+                    break;
+                }
+                i++;
+            }
 
-                    if (!device.AudioClient.IsFormatSupported(AudioClientShareMode.Shared, returnFormat))
+            if(returnFormat == null)
+            {
+                Logger.Error("GetSupportedWaveFormat: Could not find a supported format, trying exclusive mode");
+                i = 0;
+                while (returnFormat == null && i < SupportedFormats.Count)
+                {
+                    WaveFormat testFormat = SupportedFormats[i];
+                    if (device.AudioClient.IsFormatSupported(AudioClientShareMode.Exclusive, testFormat))
                     {
-                        return null;
+                        returnFormat = testFormat;
+                        break;
                     }
+                    i++;
                 }
             }
 

@@ -1,10 +1,5 @@
 ﻿using NAudio.Wave;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AudioVisualizerWidget
 {
@@ -18,8 +13,8 @@ namespace AudioVisualizerWidget
         {
             // We assume that Windows audio mixer is always using floats
 
-            Debug.Assert(format.Encoding == WaveFormatEncoding.IeeeFloat);
-            Debug.Assert(format.BitsPerSample == 32);
+            //Debug.Assert(format.Encoding == WaveFormatEncoding.IeeeFloat);
+            //Debug.Assert(format.BitsPerSample == 32);
 
             _channels = format.Channels;
             _bytesPerSample = format.BitsPerSample / 8;

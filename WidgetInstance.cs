@@ -1,21 +1,16 @@
 ﻿using WigiDashWidgetFramework;
 using System;
 using System.Drawing;
-using NAudio.Wave;
 using System.Threading;
-using NAudio.CoreAudioApi;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using WigiDashWidgetFramework.WidgetUtility;
 using System.Windows.Controls;
-using NAudio.Dsp;
 using System.Threading.Tasks;
 using ScottPlot;
 using MathNet.Numerics.Interpolation;
-using System.IO;
 using NLog;
-using NLog.Fluent;
 
 namespace AudioVisualizerWidget
 {
