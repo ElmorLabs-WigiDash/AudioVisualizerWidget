@@ -581,16 +581,6 @@ namespace AudioVisualizerWidget
             _audioDeviceHandler = null;
             if (mutex_result) _bitmapLock.ReleaseMutex();
         }
-
-        private SettingsControl control;
-        public UserControl GetSettingsControl()
-        {
-            if (control == null)
-            {
-                control = new SettingsControl(this);
-            }
-
-            return control;
-        }
+        public UserControl GetSettingsControl() => new SettingsControl(this);
     }
 }
