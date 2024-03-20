@@ -1,9 +1,9 @@
-﻿using NLog;
-using System;
+﻿using System;
 using System.Drawing;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using WigiDashWidgetFramework;
 
 namespace AudioVisualizerWidget
 {
@@ -12,7 +12,6 @@ namespace AudioVisualizerWidget
     /// </summary>
     public partial class SettingsControl : UserControl
     {
-        private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
         private WidgetInstance _parent;
         public SettingsControl(WidgetInstance parent)
         {

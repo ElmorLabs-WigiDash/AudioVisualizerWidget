@@ -1,10 +1,10 @@
 ﻿using NAudio.Dsp;
-using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WigiDashWidgetFramework;
 
 namespace AudioVisualizerWidget
 {
@@ -32,8 +32,6 @@ namespace AudioVisualizerWidget
         public event EventHandler Update;
 
         private double sampleRate;
-
-        private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
         public AudioDataAnalyzer(AudioDeviceHandler handler)
         {

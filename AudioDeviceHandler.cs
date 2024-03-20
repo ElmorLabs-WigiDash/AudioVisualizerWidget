@@ -1,11 +1,11 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
-using NLog;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Documents;
+using WigiDashWidgetFramework;
 
 namespace AudioVisualizerWidget
 {
@@ -33,8 +33,6 @@ namespace AudioVisualizerWidget
         private int SampleCount = 0;
 
         public event EventHandler DataReceived;
-
-        private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
         public AudioDeviceHandler(MMDevice device)
         {

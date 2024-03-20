@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using NLog;
+using WigiDashWidgetFramework;
 
 namespace AudioVisualizerWidget
 {
@@ -20,7 +20,6 @@ namespace AudioVisualizerWidget
         public event EventHandler DevicesChanged;
 
         public string DefaultDevice { get; private set; }
-        private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
         public AudioDeviceSource()
         {

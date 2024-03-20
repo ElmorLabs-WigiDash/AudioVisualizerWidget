@@ -10,7 +10,6 @@ using System.Windows.Controls;
 using System.Threading.Tasks;
 using ScottPlot;
 using MathNet.Numerics.Interpolation;
-using NLog;
 
 namespace AudioVisualizerWidget
 {
@@ -58,8 +57,6 @@ namespace AudioVisualizerWidget
         private AudioDataAnalyzer _audioDataAnalyzer;
 
         private Dictionary<int, double> _frequencyDataSeries = new Dictionary<int, double>();
-
-        private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
         public WidgetInstance(AudioVisualizerWidgetServer parent, WidgetSize widget_size, Guid instance_guid)
         {
