@@ -147,4 +147,10 @@
   <data name="SettingsControl_Save" xml:space="preserve">
     <value>저장</value>
   </data>
+  <data name="Name_AudioVisualizer" xml:space="preserve">
+    <value>오디오 비주얼라이저</value>
+  </data>
+  <data name="Description_AnAudioVisualizer" xml:space="preserve">
+    <value>오디오 스펙트럼을 막대나 표로 보여줍니다</value>
+  </data>
 </root>

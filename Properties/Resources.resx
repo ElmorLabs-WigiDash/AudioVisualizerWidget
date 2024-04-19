@@ -147,4 +147,10 @@
   <data name="SettingsControl_Save" xml:space="preserve">
     <value>Save</value>
   </data>
+  <data name="Name_AudioVisualizer" xml:space="preserve">
+    <value>Audio Visualizer</value>
+  </data>
+  <data name="Description_AnAudioVisualizer" xml:space="preserve">
+    <value>Visualizes audio as bars or a line</value>
+  </data>
 </root>

@@ -15,12 +15,12 @@ namespace AudioVisualizerWidget {
         }
         public string Name {
             get {
-                return "Audio Visualizer";
+                return AudioVisualizerWidget.Properties.Resources.Name_AudioVisualizer;
             }
         }
         public string Description {
             get {
-                return "An audio visualizer";
+                return AudioVisualizerWidget.Properties.Resources.Description_AnAudioVisualizer;
             }
         }
         public string Author {

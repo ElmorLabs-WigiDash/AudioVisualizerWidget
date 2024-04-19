@@ -61,6 +61,24 @@ namespace AudioVisualizerWidget.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Visualizes audio as bars or a line.
+        /// </summary>
+        public static string Description_AnAudioVisualizer {
+            get {
+                return ResourceManager.GetString("Description_AnAudioVisualizer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Audio Visualizer.
+        /// </summary>
+        public static string Name_AudioVisualizer {
+            get {
+                return ResourceManager.GetString("Name_AudioVisualizer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Background.
         /// </summary>
         public static string SettingsControl_Background {
