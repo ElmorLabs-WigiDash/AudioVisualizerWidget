@@ -35,14 +35,14 @@ namespace AudioVisualizerWidget {
         }
         public Version Version {
             get {
-                return new Version(1,0,2);
+                return new Version(1,0,3);
             }
         }
 
         // Capabilities
         public SdkVersion TargetSdk {
             get {
-                return SdkVersion.Version_0;
+                return WidgetUtility.CurrentSdkVersion;
             }
         }
 
