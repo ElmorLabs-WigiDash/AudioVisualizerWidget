@@ -33,9 +33,12 @@ namespace AudioVisualizerWidget
 
         private double sampleRate;
 
-        public AudioDataAnalyzer(AudioDeviceHandler handler)
+        private ILogger _logger;
+
+        public AudioDataAnalyzer(AudioDeviceHandler handler, ILogger logger)
         {
             _handler = handler;
+            _logger = logger;
 
             if(_handler == null) {
                 throw new Exception("AudioDataAnalyzer handler invalid");
@@ -55,19 +58,19 @@ namespace AudioVisualizerWidget
             var fftWindowSize = 512;
             _log2 = 9;
 
-            Logger.Debug($"AudioDataAnalyzer: Sample rate: {sampleRate}");
+            _logger.Debug($"AudioDataAnalyzer: Sample rate: {sampleRate}");
             while (fftWindowSize / sampleRate < minLen)
             {
                 fftWindowSize *= 2;
                 _log2 += 1;
 
-                Logger.Debug($"AudioDataAnalyzer: FFT window size: {fftWindowSize}");
-                Logger.Debug($"AudioDataAnalyzer: FFT log2: {_log2}");
-                Logger.Debug($"AudioDataAnalyzer: FFT length: {fftWindowSize / sampleRate}");
+                _logger.Debug($"AudioDataAnalyzer: FFT window size: {fftWindowSize}");
+                _logger.Debug($"AudioDataAnalyzer: FFT log2: {_log2}");
+                _logger.Debug($"AudioDataAnalyzer: FFT length: {fftWindowSize / sampleRate}");
             }
 
-            Logger.Debug($"AudioDataAnalyzer: FFT window size: {fftWindowSize}");
-            Logger.Debug($"AudioDataAnalyzer: FFT log2: {_log2}");
+            _logger.Debug($"AudioDataAnalyzer: FFT window size: {fftWindowSize}");
+            _logger.Debug($"AudioDataAnalyzer: FFT log2: {_log2}");
 
             _fftWindowSize = fftWindowSize;
 
@@ -75,14 +78,14 @@ namespace AudioVisualizerWidget
             FftDataPoints = fftWindowSize / 2;
             FftFrequencySpacing = _handler.SamplesPerSecond / fftWindowSize;
 
-            Logger.Debug("AudioDataAnalyzer: Populating FFT Indices");
+            _logger.Debug("AudioDataAnalyzer: Populating FFT Indices");
             FftIndices = new int[FftDataPoints];
             for (int i = 0; i < FftIndices.Length; i++)
             {
                 FftIndices[i] = i * FftFrequencySpacing;
             }
 
-            Logger.Debug("AudioDataAnalyzer: Populating Spectrogram Buffer");
+            _logger.Debug("AudioDataAnalyzer: Populating Spectrogram Buffer");
             SpectrogramBuffer = new double[SpectrogramFrameCount, FftDataPoints];
             for (int x = 0; x < SpectrogramFrameCount; x++)
             {
@@ -93,14 +96,14 @@ namespace AudioVisualizerWidget
             }
             DbValues = new double[FftDataPoints];
 
-            Logger.Debug("AudioDataAnalyzer: Populating Primary Indices");
+            _logger.Debug("AudioDataAnalyzer: Populating Primary Indices");
             PrimaryIndices = new int[handler.BufferSize];
             for (int i = 0; i < PrimaryIndices.Length; i++)
             {
                 PrimaryIndices[i] = i;
             }
 
-            Logger.Debug("AudioDataAnalyzer: Hooking data received event");
+            _logger.Debug("AudioDataAnalyzer: Hooking data received event");
             handler.DataReceived += DataReceived;
         }
 

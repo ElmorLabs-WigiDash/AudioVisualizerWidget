@@ -34,9 +34,13 @@ namespace AudioVisualizerWidget
 
         public event EventHandler DataReceived;
 
-        public AudioDeviceHandler(MMDevice device)
+        private ILogger _logger;
+
+        public AudioDeviceHandler(MMDevice device, ILogger logger)
         {
-            Logger.Debug($"AudioDeviceHandler: Device: {device.FriendlyName}");
+            _logger = logger;
+
+            _logger.Debug($"AudioDeviceHandler: Device: {device.FriendlyName}");
             _token = _cts.Token;
             _device = device;
 
@@ -44,25 +48,25 @@ namespace AudioVisualizerWidget
 
             if (_waveFormat == null)
             {
-                Logger.Error("Could not get a supported waveformat!");
+                _logger.Error("Could not get a supported waveformat!");
                 return;
             }
 
             SamplesPerSecond = _waveFormat.SampleRate;
 
-            Logger.Debug($"AudioDeviceHandler: Sample rate: {SamplesPerSecond}");
+            _logger.Debug($"AudioDeviceHandler: Sample rate: {SamplesPerSecond}");
 
             BufferSize = SamplesPerSecond * 50 / 1000; // 50ms buffer
 
-            Logger.Debug($"AudioDeviceHandler: Buffer size: {BufferSize}");
-            Logger.Debug($"Derived Waveform: {_waveFormat}");
+            _logger.Debug($"AudioDeviceHandler: Buffer size: {BufferSize}");
+            _logger.Debug($"Derived Waveform: {_waveFormat}");
 
             _input = new double[BufferSize];
             _inputBack = new double[BufferSize];
-            
+
             //_currentBuffer = new double[(int)(BufferSize)];
 
-            Logger.Debug("AudioDeviceHandler: Hooking into audio device...");
+            _logger.Debug("AudioDeviceHandler: Hooking into audio device...");
 
             var capture = new WasapiLoopbackCaptureAlt(device);
             capture.WaveFormat = _waveFormat;
@@ -74,13 +78,13 @@ namespace AudioVisualizerWidget
             _reader = new SampleReader(_waveFormat);
 
             // Play silence to initialize the audio device
-            Logger.Debug("AudioDeviceHandler: Playing Silence...");
+            _logger.Debug("AudioDeviceHandler: Playing Silence...");
             var silence = new SilenceProvider(_waveFormat).ToSampleProvider();
             _waveOut = new WaveOutEvent();
             _waveOut.Init(silence);
             _waveOut.Play();
 
-            Logger.Debug("AudioDeviceHandler: Starting audio capture...");
+            _logger.Debug("AudioDeviceHandler: Starting audio capture...");
             _ = Task.Run(ProcessData, _cts.Token);
         }
 
@@ -99,7 +103,7 @@ namespace AudioVisualizerWidget
             WaveFormat deviceMixFormat = device.AudioClient.MixFormat;
             WaveFormat returnFormat = null;
 
-            Logger.Debug($"GetSupportedWaveFormat: Device MixFormat: {deviceMixFormat}");
+            _logger.Debug($"GetSupportedWaveFormat: Device MixFormat: {deviceMixFormat}");
 
             int i = 0;
             while(returnFormat == null && i<SupportedFormats.Count)
@@ -115,7 +119,7 @@ namespace AudioVisualizerWidget
 
             if(returnFormat == null)
             {
-                Logger.Error("GetSupportedWaveFormat: Could not find a supported format, trying exclusive mode");
+                _logger.Error("GetSupportedWaveFormat: Could not find a supported format, trying exclusive mode");
                 i = 0;
                 while (returnFormat == null && i < SupportedFormats.Count)
                 {
@@ -136,7 +140,7 @@ namespace AudioVisualizerWidget
         {
             if (_capture.CaptureState == CaptureState.Stopped)
             {
-                Logger.Debug("AudioDeviceHandler: Starting Capture...");
+                _logger.Debug("AudioDeviceHandler: Starting Capture...");
                 _capture?.StartRecording();
                 _waveOut?.Play();
             }
@@ -146,7 +150,7 @@ namespace AudioVisualizerWidget
         {
             if (_capture?.CaptureState == CaptureState.Capturing)
             {
-                Logger.Debug("AudioDeviceHandler: Stopping Capture...");
+                _logger.Debug("AudioDeviceHandler: Stopping Capture...");
                 _capture?.StopRecording();
                 _waveOut?.Stop();
             }
@@ -205,7 +209,7 @@ namespace AudioVisualizerWidget
             _waveOut?.Dispose();
 
             try { _cts?.Cancel(); }
-            catch (Exception ex) { Logger.Error(ex, "Could not cancel capture task"); }
+            catch (Exception ex) { _logger.Error(ex, "Could not cancel capture task"); }
         }
     }
 }

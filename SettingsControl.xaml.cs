@@ -13,8 +13,10 @@ namespace AudioVisualizerWidget
     public partial class SettingsControl : UserControl
     {
         private WidgetInstance _parent;
-        public SettingsControl(WidgetInstance parent)
+        private readonly ILogger _logger;
+        public SettingsControl(WidgetInstance parent, ILogger logger)
         {
+            _logger = logger;
             this._parent = parent;
             Loaded += OnLoad;
             InitializeComponent();
@@ -97,7 +99,7 @@ namespace AudioVisualizerWidget
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Failed to run save settings from settings control");
+                _logger.Error(ex, "Failed to run save settings from settings control");
             }
         }
 

@@ -52,11 +52,13 @@ namespace AudioVisualizerWidget
         public string PreferredDeviceID = string.Empty;
         public string PreferredDeviceName = string.Empty;
         public string SelectedDeviceID = string.Empty;
-        public AudioDeviceSource AudioDeviceSource = new AudioDeviceSource();
+        public AudioDeviceSource AudioDeviceSource;
         private AudioDeviceHandler _audioDeviceHandler;
         private AudioDataAnalyzer _audioDataAnalyzer;
 
         private Dictionary<int, double> _frequencyDataSeries = new Dictionary<int, double>();
+
+        private readonly ILogger _logger;
 
         public WidgetInstance(AudioVisualizerWidgetServer parent, WidgetSize widget_size, Guid instance_guid)
         {
@@ -69,11 +71,17 @@ namespace AudioVisualizerWidget
             _visualizerSize = WidgetSize.ToSize();
             _bitmapCurrent = new Bitmap(_visualizerSize.Width, _visualizerSize.Height);
 
+            // _logger
+            _logger = parent.WidgetManager.GetLogger();
+
             // Load Settings from Store
             LoadSettings();
 
             // Hook to update theme
             parent.WidgetManager.GlobalThemeUpdated += UpdateSettings;
+
+            // Device Source
+            AudioDeviceSource = new AudioDeviceSource(_logger);
 
             Init();
 
@@ -100,18 +108,18 @@ namespace AudioVisualizerWidget
                 if (string.IsNullOrEmpty(SelectedDeviceID))
                 {
                     // Get default device
-                    Logger.Debug("Initializer: Finding default device...");
+                    _logger.Debug("Initializer: Finding default device...");
 
                     defaultDeviceId = FindDefaultDevice();
                 } else
                 {
-                    Logger.Debug("Initializer: Setting device...");
+                    _logger.Debug("Initializer: Setting device...");
                     defaultDeviceId = SelectedDeviceID;
                 }
 
                 if (string.IsNullOrEmpty(defaultDeviceId))
                 {
-                    Logger.Debug("Initializer: No supported device found");
+                    _logger.Debug("Initializer: No supported device found");
                     noDevices = true;
                     ClearWidget("No supported device found");
                     return;
@@ -121,7 +129,7 @@ namespace AudioVisualizerWidget
                     ClearWidget();
 
                     // Hook to default device
-                    Logger.Debug("Initializer: Found device: " + defaultDeviceId);
+                    _logger.Debug("Initializer: Found device: " + defaultDeviceId);
                     bool hookResult = HandleInputDeviceChange(defaultDeviceId);
 
                     if (!hookResult)
@@ -138,7 +146,7 @@ namespace AudioVisualizerWidget
             } catch (Exception ex)
             {
                 SelectedDeviceID = string.Empty;
-                Logger.Error(ex, "Initializer: Hooking in failed");
+                _logger.Error(ex, "Initializer: Hooking in failed");
                 ClearWidget("No supported devices!");
                 return;
             }
@@ -230,17 +238,17 @@ namespace AudioVisualizerWidget
 
         private string FindDefaultDevice()
         {
-            Logger.Debug("Looking for default device");
+            _logger.Debug("Looking for default device");
             if (AudioDeviceSource.Devices.Count == 0)
             {
-                Logger.Debug("No devices found in source");
+                _logger.Debug("No devices found in source");
                 return string.Empty;
             }
 
             AudioDeviceInfo preferredDevice = AudioDeviceSource.Devices.FirstOrDefault(d => d.ID == PreferredDeviceID);
             if (preferredDevice != null)
             {
-                Logger.Debug($"Found preferred device: {preferredDevice.DisplayName}, {{{preferredDevice.ID}}}");
+                _logger.Debug($"Found preferred device: {preferredDevice.DisplayName}, {{{preferredDevice.ID}}}");
                 return PreferredDeviceID;
             }
 
@@ -248,11 +256,11 @@ namespace AudioVisualizerWidget
 
             if (string.IsNullOrEmpty(deviceId))
             {
-                Logger.Debug("No default device found");
+                _logger.Debug("No default device found");
                 return string.Empty;
             } else
             {
-                Logger.Debug($"Found default device: {deviceId}");
+                _logger.Debug($"Found default device: {deviceId}");
             }
 
             return deviceId;
@@ -263,19 +271,19 @@ namespace AudioVisualizerWidget
             // Null check
             if (string.IsNullOrEmpty(newId))
             {
-                Logger.Debug("HandleInputDeviceChange: Invalid device ID!");
+                _logger.Debug("HandleInputDeviceChange: Invalid device ID!");
                 return false;
             }
 
             // Dispose any previous handlers
-            Logger.Debug("HandleInputDeviceChange: Disposing previous handler...");
+            _logger.Debug("HandleInputDeviceChange: Disposing previous handler...");
             //_audioDeviceHandler?.Dispose();
             _audioDeviceHandler = null;
 
             // Dispose any previous analyzers
             if (_audioDataAnalyzer != null)
             {
-                Logger.Debug("HandleInputDeviceChange: Disposing previous analyzer...");
+                _logger.Debug("HandleInputDeviceChange: Disposing previous analyzer...");
                 _audioDataAnalyzer.Update -= Update;
                 _audioDataAnalyzer = null;
             }
@@ -283,24 +291,24 @@ namespace AudioVisualizerWidget
             try
             {
                 // Create new handler and analyzer
-                Logger.Debug("HandleInputDeviceChange: Creating new handler...");
+                _logger.Debug("HandleInputDeviceChange: Creating new handler...");
                 _audioDeviceHandler = AudioDeviceSource.CreateHandler(newId);
-                _audioDataAnalyzer = new AudioDataAnalyzer(_audioDeviceHandler);
+                _audioDataAnalyzer = new AudioDataAnalyzer(_audioDeviceHandler, _logger);
 
                 // Hook into analyzer
-                Logger.Debug("HandleInputDeviceChange: Hooking into analyzer...");
+                _logger.Debug("HandleInputDeviceChange: Hooking into analyzer...");
                 _audioDataAnalyzer.Update += Update;
 
                 // Initialize data storage
                 InitDataStorage(_audioDataAnalyzer, _audioDeviceHandler);
 
                 // Start handler
-                Logger.Debug("HandleInputDeviceChange: Starting handler...");
+                _logger.Debug("HandleInputDeviceChange: Starting handler...");
                 _audioDeviceHandler.Start();
 
             } catch (Exception ex)
             {
-                Logger.Error(ex, "An error occurred while trying to hook into the audio device handler.");
+                _logger.Error(ex, "An error occurred while trying to hook into the audio device handler.");
                 return false;
             }
 
@@ -310,7 +318,7 @@ namespace AudioVisualizerWidget
 
         private void InitDataStorage(AudioDataAnalyzer analyzer, AudioDeviceHandler handler)
         {
-            Logger.Debug("InitDataStorage: Initializing data storage...");
+            _logger.Debug("InitDataStorage: Initializing data storage...");
             _frequencyDataSeries = new Dictionary<int, double>(analyzer.FftDataPoints);
             _frequencyDataSeries.Append(analyzer.FftIndices, analyzer.DbValues);
         }
@@ -578,6 +586,6 @@ namespace AudioVisualizerWidget
             _audioDeviceHandler = null;
             if (mutex_result) _bitmapLock.ReleaseMutex();
         }
-        public UserControl GetSettingsControl() => new SettingsControl(this);
+        public UserControl GetSettingsControl() => new SettingsControl(this, _logger);
     }
 }
