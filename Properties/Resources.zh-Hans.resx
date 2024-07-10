@@ -117,4 +117,40 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="SettingsControl_UseGlobalTheme" xml:space="preserve">
+    <value>使用全局主题</value>
+  </data>
+  <data name="SettingsControl_Foreground" xml:space="preserve">
+    <value>前景</value>
+  </data>
+  <data name="SettingsControl_Background" xml:space="preserve">
+    <value>背景</value>
+  </data>
+  <data name="SettingsControl_GraphType" xml:space="preserve">
+    <value>图表类型:</value>
+  </data>
+  <data name="SettingsControl_VisualizerDensity" xml:space="preserve">
+    <value>可视化密度:</value>
+  </data>
+  <data name="SettingsControl_PreferredDevice" xml:space="preserve">
+    <value>设备:</value>
+  </data>
+  <data name="SettingsControl_NormalizeVolume" xml:space="preserve">
+    <value>标准化音量</value>
+  </data>
+  <data name="SettingsControl_ShowGrid" xml:space="preserve">
+    <value>显示网格</value>
+  </data>
+  <data name="SettingsControl_ShowAxis" xml:space="preserve">
+    <value>显示坐标轴</value>
+  </data>
+  <data name="SettingsControl_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Name_AudioVisualizer" xml:space="preserve">
+    <value>音频可视化工具</value>
+  </data>
+  <data name="Description_AnAudioVisualizer" xml:space="preserve">
+    <value>将音频可视化为条形图或线条</value>
+  </data>
 </root>
