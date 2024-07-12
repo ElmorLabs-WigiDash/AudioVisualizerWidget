@@ -127,13 +127,13 @@
     <value>背景色</value>
   </data>
   <data name="SettingsControl_GraphType" xml:space="preserve">
-    <value>グラフの種類</value>
+    <value>グラフの種類:</value>
   </data>
   <data name="SettingsControl_VisualizerDensity" xml:space="preserve">
-    <value>ビジュアライザーの密度</value>
+    <value>ビジュアライザーの密度:</value>
   </data>
   <data name="SettingsControl_PreferredDevice" xml:space="preserve">
-    <value>優先デバイス</value>
+    <value>優先デバイス:</value>
   </data>
   <data name="SettingsControl_NormalizeVolume" xml:space="preserve">
     <value>ボリュームの正規化</value>
