@@ -117,40 +117,40 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="SettingsControl_UseGlobalTheme" xml:space="preserve">
-    <value>Utiliser le thème général</value>
-  </data>
-  <data name="SettingsControl_Foreground" xml:space="preserve">
-    <value>Premier plan</value>
-  </data>
-  <data name="SettingsControl_Background" xml:space="preserve">
-    <value>Arrière plan</value>
-  </data>
-  <data name="SettingsControl_GraphType" xml:space="preserve">
-    <value>Type de graphe:</value>
-  </data>
-  <data name="SettingsControl_VisualizerDensity" xml:space="preserve">
-    <value>Densité du visualiseur:</value>
-  </data>
-  <data name="SettingsControl_PreferredDevice" xml:space="preserve">
-    <value>Appareil préferré:</value>
-  </data>
-  <data name="SettingsControl_NormalizeVolume" xml:space="preserve">
-    <value>Normaliser le volume</value>
-  </data>
-  <data name="SettingsControl_ShowGrid" xml:space="preserve">
-    <value>Montrer le quadrillage</value>
-  </data>
-  <data name="SettingsControl_ShowAxis" xml:space="preserve">
-    <value>Montrer l'axe</value>
-  </data>
-  <data name="SettingsControl_Save" xml:space="preserve">
-    <value>Sauvegarder</value>
+  <data name="Description_AnAudioVisualizer" xml:space="preserve">
+    <value>Visualiseur audio en barres ou lignes</value>
   </data>
   <data name="Name_AudioVisualizer" xml:space="preserve">
     <value>Visualiseur audio</value>
   </data>
-  <data name="Description_AnAudioVisualizer" xml:space="preserve">
-    <value>Visualiseur audio en barres ou lignes</value>
+  <data name="SettingsControl_Background" xml:space="preserve">
+    <value>Arrière plan</value>
+  </data>
+  <data name="SettingsControl_Foreground" xml:space="preserve">
+    <value>Premier plan</value>
+  </data>
+  <data name="SettingsControl_GraphType" xml:space="preserve">
+    <value>Type de graphe:</value>
+  </data>
+  <data name="SettingsControl_NormalizeVolume" xml:space="preserve">
+    <value>Normaliser le volume</value>
+  </data>
+  <data name="SettingsControl_PreferredDevice" xml:space="preserve">
+    <value>Appareil préferré:</value>
+  </data>
+  <data name="SettingsControl_Save" xml:space="preserve">
+    <value>Sauvegarder</value>
+  </data>
+  <data name="SettingsControl_ShowAxis" xml:space="preserve">
+    <value>Montrer l'axe</value>
+  </data>
+  <data name="SettingsControl_ShowGrid" xml:space="preserve">
+    <value>Montrer le quadrillage</value>
+  </data>
+  <data name="SettingsControl_UseGlobalTheme" xml:space="preserve">
+    <value>Utiliser le thème général</value>
+  </data>
+  <data name="SettingsControl_VisualizerDensity" xml:space="preserve">
+    <value>Densité du visualiseur:</value>
   </data>
 </root>
