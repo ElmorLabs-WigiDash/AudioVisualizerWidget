@@ -35,7 +35,7 @@ namespace AudioVisualizerWidget {
         }
         public Version Version {
             get {
-                return new Version(1,0,3);
+                return new Version(1,0,4);
             }
         }
 
