@@ -1,22 +1,36 @@
 ﻿<UserControl x:Class="AudioVisualizerWidget.SettingsControl"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:AudioVisualizerWidget"
-             xmlns:properties="clr-namespace:AudioVisualizerWidget.Properties"
-             mc:Ignorable="d" 
-             d:DesignHeight="300" d:DesignWidth="225" d:Background="White">
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:local="clr-namespace:AudioVisualizerWidget"
+  xmlns:properties="clr-namespace:AudioVisualizerWidget.Properties"
+  mc:Ignorable="d"
+  d:DesignHeight="300"
+  d:DesignWidth="225"
+  d:Background="White">
   <StackPanel>
-    <CheckBox x:Name="globalThemeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="{x:Static properties:Resources.SettingsControl_UseGlobalTheme}" FontSize="10" Click="globalThemeCheck_Click"></CheckBox>
+    <CheckBox x:Name="globalThemeCheck"
+      Height="20"
+      VerticalContentAlignment="Center"
+      VerticalAlignment="Center"
+      Margin="6, 2"
+      Content="{x:Static properties:Resources.SettingsControl_UseGlobalTheme}"
+      FontSize="10"
+      Click="globalThemeCheck_Click"></CheckBox>
 
     <Grid Margin="2">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="100"></ColumnDefinition>
         <ColumnDefinition></ColumnDefinition>
       </Grid.ColumnDefinitions>
-      <Label Content="{x:Static properties:Resources.SettingsControl_Foreground}" FontSize="10" HorizontalAlignment="Stretch"/>
-      <Button x:Name="fgColorSelect" Grid.Column="1" Click="fgColorSelect_Click" HorizontalAlignment="Stretch"></Button>
+      <Label Content="{x:Static properties:Resources.SettingsControl_Foreground}"
+        FontSize="10"
+        HorizontalAlignment="Stretch"/>
+      <Button x:Name="fgColorSelect"
+        Grid.Column="1"
+        Click="fgColorSelect_Click"
+        HorizontalAlignment="Stretch"></Button>
     </Grid>
 
     <Grid Margin="2">
@@ -24,8 +38,13 @@
         <ColumnDefinition Width="100"></ColumnDefinition>
         <ColumnDefinition></ColumnDefinition>
       </Grid.ColumnDefinitions>
-      <Label Content="{x:Static properties:Resources.SettingsControl_Background}" FontSize="10" HorizontalAlignment="Stretch"/>
-      <Button x:Name="bgColorSelect" Grid.Column="1" Click="bgColorSelect_Click" HorizontalAlignment="Stretch"></Button>
+      <Label Content="{x:Static properties:Resources.SettingsControl_Background}"
+        FontSize="10"
+        HorizontalAlignment="Stretch"/>
+      <Button x:Name="bgColorSelect"
+        Grid.Column="1"
+        Click="bgColorSelect_Click"
+        HorizontalAlignment="Stretch"></Button>
     </Grid>
 
     <Grid Margin="2">
@@ -33,8 +52,12 @@
         <ColumnDefinition></ColumnDefinition>
         <ColumnDefinition></ColumnDefinition>
       </Grid.ColumnDefinitions>
-      <Label Content="{x:Static properties:Resources.SettingsControl_GraphType}" FontSize="10" HorizontalAlignment="Stretch"></Label>
-      <ComboBox x:Name="graphSelect" Grid.Column="1" HorizontalAlignment="Stretch"></ComboBox>
+      <Label Content="{x:Static properties:Resources.SettingsControl_GraphType}"
+        FontSize="10"
+        HorizontalAlignment="Stretch"></Label>
+      <ComboBox x:Name="graphSelect"
+        Grid.Column="1"
+        HorizontalAlignment="Stretch"></ComboBox>
     </Grid>
 
     <Grid Margin="2">
@@ -42,8 +65,15 @@
         <ColumnDefinition></ColumnDefinition>
         <ColumnDefinition></ColumnDefinition>
       </Grid.ColumnDefinitions>
-      <Label Content="{x:Static properties:Resources.SettingsControl_VisualizerDensity}" FontSize="10" HorizontalAlignment="Stretch"></Label>
-      <Slider x:Name="vdSlider" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Minimum="4" Maximum="300"></Slider>
+      <Label Content="{x:Static properties:Resources.SettingsControl_VisualizerDensity}"
+        FontSize="10"
+        HorizontalAlignment="Stretch"></Label>
+      <Slider x:Name="vdSlider"
+        Grid.Column="1"
+        HorizontalAlignment="Stretch"
+        VerticalAlignment="Center"
+        Minimum="4"
+        Maximum="300"></Slider>
     </Grid>
 
     <Grid Margin="2">
@@ -51,15 +81,50 @@
         <ColumnDefinition></ColumnDefinition>
         <ColumnDefinition></ColumnDefinition>
       </Grid.ColumnDefinitions>
-      <Label Content="{x:Static properties:Resources.SettingsControl_PreferredDevice}" FontSize="10" HorizontalAlignment="Stretch"></Label>
-      <ComboBox x:Name="deviceSelect" Grid.Column="1" HorizontalAlignment="Stretch"
-                      IsEditable="True" IsReadOnly="True" Focusable="False"></ComboBox>
+      <Label Content="{x:Static properties:Resources.SettingsControl_PreferredDevice}"
+        FontSize="10"
+        HorizontalAlignment="Stretch"></Label>
+      <ComboBox x:Name="deviceSelect"
+        Grid.Column="1"
+        HorizontalAlignment="Stretch"
+        IsEditable="True"
+        IsReadOnly="True"
+        Focusable="False"></ComboBox>
     </Grid>
 
-    <CheckBox x:Name="normalizeCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="{x:Static properties:Resources.SettingsControl_NormalizeVolume}" FontSize="10"></CheckBox>
-    <CheckBox x:Name="gridCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="{x:Static properties:Resources.SettingsControl_ShowGrid}" FontSize="10"></CheckBox>
-    <CheckBox x:Name="axisCheck" Height="20" VerticalContentAlignment="Center" VerticalAlignment="Center" Margin="6, 2" Content="{x:Static properties:Resources.SettingsControl_ShowAxis}" FontSize="10"></CheckBox>
+    <CheckBox x:Name="followDefaultCheck"
+      Height="20"
+      VerticalContentAlignment="Center"
+      VerticalAlignment="Center"
+      Margin="6, 2"
+      Content="Follow Windows Default Device"
+      FontSize="10"
+      Click="followDefaultCheck_Click"></CheckBox>
+    <CheckBox x:Name="normalizeCheck"
+      Height="20"
+      VerticalContentAlignment="Center"
+      VerticalAlignment="Center"
+      Margin="6, 2"
+      Content="{x:Static properties:Resources.SettingsControl_NormalizeVolume}"
+      FontSize="10"></CheckBox>
+    <CheckBox x:Name="gridCheck"
+      Height="20"
+      VerticalContentAlignment="Center"
+      VerticalAlignment="Center"
+      Margin="6, 2"
+      Content="{x:Static properties:Resources.SettingsControl_ShowGrid}"
+      FontSize="10"></CheckBox>
+    <CheckBox x:Name="axisCheck"
+      Height="20"
+      VerticalContentAlignment="Center"
+      VerticalAlignment="Center"
+      Margin="6, 2"
+      Content="{x:Static properties:Resources.SettingsControl_ShowAxis}"
+      FontSize="10"></CheckBox>
 
-    <Button Margin="2" Content="{x:Static properties:Resources.SettingsControl_Save}" Click="SaveButton_Click" HorizontalAlignment="Stretch"></Button>
+    <Button Margin="2"
+      Content="{x:Static properties:Resources.SettingsControl_Save}"
+      Click="SaveButton_Click"
+      HorizontalAlignment="Stretch"></Button>
   </StackPanel>
 </UserControl>
