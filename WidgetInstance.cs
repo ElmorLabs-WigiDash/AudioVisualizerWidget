@@ -508,8 +508,16 @@ namespace AudioVisualizerWidget
         /// </summary>
         public void ClearWidget(string status = "")
         {
-            if (_bitmapLock.WaitOne(mutex_timeout))
+            if (_bitmapCurrent == null || _bitmapLock == null)
+                return;
+                
+            bool lockAcquired = false;
+            try
             {
+                lockAcquired = _bitmapLock.WaitOne(mutex_timeout);
+                if (!lockAcquired)
+                    return;
+                    
                 try
                 {
                     using (Graphics g = Graphics.FromImage(_bitmapCurrent))
@@ -533,9 +541,38 @@ namespace AudioVisualizerWidget
                 {
                     Logger.Error(ex, "Error clearing widget");
                 }
-                finally
+            }
+            catch (ObjectDisposedException)
+            {
+                // Mutex was already disposed, ignore
+                Logger.Debug("Mutex already disposed in ClearWidget");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error waiting for mutex in ClearWidget");
+            }
+            finally
+            {
+                if (lockAcquired && _bitmapLock != null)
                 {
-                    _bitmapLock.ReleaseMutex();
+                    try
+                    {
+                        _bitmapLock.ReleaseMutex();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Mutex was disposed after we acquired it
+                        Logger.Debug("Mutex was disposed after acquisition in ClearWidget");
+                    }
+                    catch (ApplicationException)
+                    {
+                        // Not owning the mutex - this shouldn't happen but handle it anyway
+                        Logger.Debug("ApplicationException releasing mutex in ClearWidget");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Error releasing mutex in ClearWidget");
+                    }
                 }
             }
         }
@@ -545,8 +582,8 @@ namespace AudioVisualizerWidget
         /// </summary>
         public void DrawWidget()
         {
-            // Don't draw if no data
-            if (_bitmapCurrent == null)
+            // Don't draw if no data or if mutex is null
+            if (_bitmapCurrent == null || _bitmapLock == null)
             {
                 return;
             }
@@ -577,8 +614,13 @@ namespace AudioVisualizerWidget
             }
 
             // Check drawing conditions and frequency data values
-            if (_bitmapLock.WaitOne(mutex_timeout))
+            bool lockAcquired = false;
+            try
             {
+                lockAcquired = _bitmapLock.WaitOne(mutex_timeout);
+                if (!lockAcquired)
+                    return;
+                    
                 try
                 {
                     using (Graphics g = Graphics.FromImage(_bitmapCurrent))
@@ -648,10 +690,39 @@ namespace AudioVisualizerWidget
                 {
                     Logger.Error(ex, "Error in DrawWidget");
                 }
-                finally
+            }
+            catch (ObjectDisposedException)
+            {
+                // Mutex was already disposed, ignore
+                Logger.Debug("Mutex already disposed in DrawWidget");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error waiting for mutex in DrawWidget");
+            }
+            finally
+            {
+                // Release bitmap lock
+                if (lockAcquired && _bitmapLock != null)
                 {
-                    // Release bitmap lock
-                    _bitmapLock.ReleaseMutex();
+                    try 
+                    {
+                        _bitmapLock.ReleaseMutex();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Mutex was already disposed, ignore
+                        Logger.Debug("Mutex already disposed in DrawWidget");
+                    }
+                    catch (ApplicationException)
+                    {
+                        // Not owning the mutex - this can happen if we never acquired it
+                        Logger.Debug("ApplicationException releasing mutex in DrawWidget");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Error releasing mutex in DrawWidget");
+                    }
                 }
             }
         }
@@ -740,15 +811,49 @@ namespace AudioVisualizerWidget
         /// </summary>
         public void RequestUpdate()
         {
-            if (_bitmapLock.WaitOne(mutex_timeout))
+            if (_bitmapLock == null)
+                return;
+                
+            bool lockAcquired = false;
+            try
             {
-                try
+                lockAcquired = _bitmapLock.WaitOne(mutex_timeout);
+                if (lockAcquired)
                 {
                     UpdateWidget();
                 }
-                finally
+            }
+            catch (ObjectDisposedException)
+            {
+                // Mutex was already disposed, ignore
+                Logger.Debug("Mutex already disposed in RequestUpdate");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error waiting for mutex in RequestUpdate");
+            }
+            finally
+            {
+                if (lockAcquired && _bitmapLock != null)
                 {
-                    _bitmapLock.ReleaseMutex();
+                    try
+                    {
+                        _bitmapLock.ReleaseMutex();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Mutex was disposed after we acquired it
+                        Logger.Debug("Mutex was disposed after acquisition in RequestUpdate");
+                    }
+                    catch (ApplicationException)
+                    {
+                        // Not owning the mutex - this shouldn't happen but handle it anyway
+                        Logger.Debug("ApplicationException releasing mutex in RequestUpdate");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Error releasing mutex in RequestUpdate");
+                    }
                 }
             }
         }
