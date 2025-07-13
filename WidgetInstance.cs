@@ -34,8 +34,8 @@ namespace AudioVisualizerWidget
 
         private Size _visualizerSize;
         private Font _visualizerFont;
-        private Color _visualizerBgColor;
-        private Color _visualizerBarColor;
+        private System.Drawing.Color _visualizerBgColor;
+        private System.Drawing.Color _visualizerBarColor;
         private WidgetTheme _globalTheme;
 
         private Bitmap _bitmapCurrent;
@@ -47,8 +47,8 @@ namespace AudioVisualizerWidget
         public bool VisualizerShowGrid;
         public bool VisualizerShowAxis;
         public bool UseGlobalTheme;
-        public Color UserVisualizerBgColor;
-        public Color UserVisualizerBarColor;
+        public System.Drawing.Color UserVisualizerBgColor;
+        public System.Drawing.Color UserVisualizerBarColor;
         public bool FollowWindowsDefaultDevice;
 
         private bool _noDevices = true;
@@ -342,10 +342,10 @@ namespace AudioVisualizerWidget
                 else VisualizerDensity = 50;
                 
                 if (!string.IsNullOrEmpty(visualizerBgColorStr)) UserVisualizerBgColor = ColorTranslator.FromHtml(visualizerBgColorStr);
-                else UserVisualizerBgColor = Color.FromArgb(0, 32, 63);
+                else UserVisualizerBgColor = System.Drawing.Color.FromArgb(0, 32, 63);
                 
                 if (!string.IsNullOrEmpty(visualizerBarColorStr)) UserVisualizerBarColor = ColorTranslator.FromHtml(visualizerBarColorStr);
-                else UserVisualizerBarColor = Color.FromArgb(173, 239, 209);
+                else UserVisualizerBarColor = System.Drawing.Color.FromArgb(173, 239, 209);
 
                 if (!string.IsNullOrEmpty(followWindowsDefaultStr)) bool.TryParse(followWindowsDefaultStr, out FollowWindowsDefaultDevice);
                 else FollowWindowsDefaultDevice = true; // Enable by default for better user experience
@@ -530,7 +530,7 @@ namespace AudioVisualizerWidget
                                 new RectangleF(0, 0, WidgetSize.ToSize().Width, WidgetSize.ToSize().Height);
                             using (var brush = new SolidBrush(_visualizerBarColor))
                             {
-                                g.DrawString(status, new Font("Lucida Console", 16, FontStyle.Bold), brush, layoutRectangle);
+                                g.DrawString(status, new Font("Lucida Console", 16, System.Drawing.FontStyle.Bold), brush, layoutRectangle);
                             }
                         }
                     }
