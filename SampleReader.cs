@@ -11,10 +11,14 @@ namespace AudioVisualizerWidget
 
         public SampleReader(WaveFormat format)
         {
-            // We assume that Windows audio mixer is always using floats
+            if (format == null)
+                throw new ArgumentNullException(nameof(format));
 
-            //Debug.Assert(format.Encoding == WaveFormatEncoding.IeeeFloat);
-            //Debug.Assert(format.BitsPerSample == 32);
+            if (format.Encoding != WaveFormatEncoding.IeeeFloat)
+                throw new ArgumentException("Only IEEE float format is supported", nameof(format));
+
+            if (format.BitsPerSample != 32)
+                throw new ArgumentException("Only 32-bit float format is supported", nameof(format));
 
             _channels = format.Channels;
             _bytesPerSample = format.BitsPerSample / 8;
@@ -23,36 +27,82 @@ namespace AudioVisualizerWidget
 
         public int NumSamples(int numBytes)
         {
+            if (numBytes < 0)
+                throw new ArgumentOutOfRangeException(nameof(numBytes), "Number of bytes cannot be negative");
+
+            if (_bytesPerFrame <= 0)
+                return 0;
+
             return numBytes / _bytesPerFrame;
         }
 
         public void ReadSamples(byte[] data, int dataCount, double[] dest)
         {
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+            
+            if (dest == null)
+                throw new ArgumentNullException(nameof(dest));
+
+            if (dataCount < 0 || dataCount > data.Length)
+                throw new ArgumentOutOfRangeException(nameof(dataCount), "Data count is out of range");
+
+            if (dataCount == 0 || dest.Length == 0)
+                return;
+
             var size = dest.Length;
             var sampleCount = NumSamples(dataCount);
             sampleCount = Math.Min(size, sampleCount);
 
-            var offset = size - sampleCount;
+            if (sampleCount <= 0)
+                return;
 
-            Array.Copy(dest, sampleCount, dest, 0, offset);
+            var offset = size - sampleCount;
+            
+            if (offset > 0)
+                Array.Copy(dest, sampleCount, dest, 0, offset);
 
             for (int i = 0; i < sampleCount; i++)
             {
-                dest[offset + i] = ReadSample(data, i);
+                try
+                {
+                    dest[offset + i] = ReadSample(data, i);
+                }
+                catch (Exception)
+                {
+                    dest[offset + i] = 0.0;
+                }
             }
         }
 
         private double ReadSample(byte[] data, int idx)
         {
+            if (idx < 0 || (idx * _bytesPerFrame + (_channels * _bytesPerSample)) > data.Length)
+                return 0.0;
+
             double result = 0;
             var pos = idx * _bytesPerFrame;
+            
             for (int i = 0; i < _channels; i++)
             {
-                var val = BitConverter.ToSingle(data, pos + _bytesPerSample * i);
-                result += val;
+                try
+                {
+                    if (pos + (_bytesPerSample * i) + 3 < data.Length)
+                    {
+                        var val = BitConverter.ToSingle(data, pos + _bytesPerSample * i);
+                        if (!float.IsNaN(val) && !float.IsInfinity(val))
+                        {
+                            result += val;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Skip this channel if there's an error
+                }
             }
-            result /= _channels;
-            return result;
+            
+            return _channels > 0 ? result / _channels : 0.0;
         }
     }
 }

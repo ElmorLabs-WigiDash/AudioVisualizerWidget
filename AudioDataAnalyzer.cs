@@ -26,46 +26,47 @@ namespace AudioVisualizerWidget
         public int[] PrimaryIndices { get; }
         public int[] FftIndices { get; }
 
+        // Add convenience properties with explicit List<> types to avoid ambiguity
+        public List<int> FftIndicesList => FftIndices?.ToList() ?? new List<int>();
+        public List<double> DbValuesList => DbValues?.ToList() ?? new List<double>();
+
         public double[] Samples => _handler.Samples;
         //public double[] CurrentSamples => _handler.CurrentBuffer;
 
         public event EventHandler Update;
 
-        private double sampleRate;
+        private readonly double _sampleRate;
+        private readonly object _processLock = new object();
 
         private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
         public AudioDataAnalyzer(AudioDeviceHandler handler)
         {
-            _handler = handler;
-
-            if(_handler == null) {
-                throw new Exception("AudioDataAnalyzer handler invalid");
-            }
+            _handler = handler ?? throw new ArgumentNullException(nameof(handler), "AudioDataAnalyzer handler invalid");
 
             if(_handler.SamplesPerSecond < 44100)
             {
-                throw new Exception($"AudioDataAnalyzer SampleRate Error ({_handler.SamplesPerSecond})");
+                throw new ArgumentException($"AudioDataAnalyzer SampleRate Error ({_handler.SamplesPerSecond})");
             }
 
             // On Windows, sample rate could be pretty much anything and FFT requires power-of-2 window size
             // So we need to pick sufficient window size based on sample rate
 
-            sampleRate = (double)_handler.SamplesPerSecond;
+            _sampleRate = (double)_handler.SamplesPerSecond;
             const double minLen = 0.05; // seconds
 
             var fftWindowSize = 512;
             _log2 = 9;
 
-            Logger.Debug($"AudioDataAnalyzer: Sample rate: {sampleRate}");
-            while (fftWindowSize / sampleRate < minLen)
+            Logger.Debug($"AudioDataAnalyzer: Sample rate: {_sampleRate}");
+            while (fftWindowSize / _sampleRate < minLen)
             {
                 fftWindowSize *= 2;
                 _log2 += 1;
 
                 Logger.Debug($"AudioDataAnalyzer: FFT window size: {fftWindowSize}");
                 Logger.Debug($"AudioDataAnalyzer: FFT log2: {_log2}");
-                Logger.Debug($"AudioDataAnalyzer: FFT length: {fftWindowSize / sampleRate}");
+                Logger.Debug($"AudioDataAnalyzer: FFT length: {fftWindowSize / _sampleRate}");
             }
 
             Logger.Debug($"AudioDataAnalyzer: FFT window size: {fftWindowSize}");
@@ -113,26 +114,39 @@ namespace AudioVisualizerWidget
 
         private void ProcessData(double[] input)
         {
-            var offset = input.Length - _fftWindowSize;
-            for (int i = 0; i < _fftWindowSize; i++)
+            lock (_processLock)
             {
-                Complex c = new Complex();
-                c.X = (float)(input[offset + i] * FastFourierTransform.BlackmannHarrisWindow(i, _fftWindowSize));
-                c.Y = 0;
-                _fftInput[i] = c;
+                if (input == null || input.Length == 0)
+                    return;
+
+                var offset = Math.Max(0, input.Length - _fftWindowSize);
+                for (int i = 0; i < _fftWindowSize; i++)
+                {
+                    Complex c = new Complex();
+                    if (i + offset < input.Length)
+                    {
+                        c.X = (float)(input[offset + i] * FastFourierTransform.BlackmannHarrisWindow(i, _fftWindowSize));
+                    }
+                    else
+                    {
+                        c.X = 0;
+                    }
+                    c.Y = 0;
+                    _fftInput[i] = c;
+                }
+
+                FastFourierTransform.FFT(true, _log2, _fftInput);
+
+                ComputeDbValues(_fftInput, DbValues);
+
+                Array.Copy(SpectrogramBuffer, FftDataPoints, SpectrogramBuffer, 0, (SpectrogramFrameCount - 1) * FftDataPoints);
+                for (var i = 0; i < FftDataPoints; i++)
+                {
+                    SpectrogramBuffer[SpectrogramFrameCount - 1, i] = DbValues[i];
+                }
+
+                Update?.Invoke(this, EventArgs.Empty);
             }
-
-            FastFourierTransform.FFT(true, _log2, _fftInput);
-
-            ComputeDbValues(_fftInput, DbValues);
-
-            Array.Copy(SpectrogramBuffer, FftDataPoints, SpectrogramBuffer, 0, (SpectrogramFrameCount - 1) * FftDataPoints);
-            for (var i = 0; i < FftDataPoints; i++)
-            {
-                SpectrogramBuffer[SpectrogramFrameCount - 1, i] = DbValues[i];
-            }
-
-            Update?.Invoke(this, EventArgs.Empty);
         }
 
         private void ComputeDbValues(Complex[] compl, double[] tgt)
@@ -141,69 +155,79 @@ namespace AudioVisualizerWidget
             {
                 var c = compl[i];
                 double mag = Math.Sqrt(c.X * c.X + c.Y * c.Y);
-                var db = 20 * Math.Log10(mag*mag);
-                tgt[i] = db;
+                var db = 20 * Math.Log10(mag * mag);
+                tgt[i] = double.IsInfinity(db) || double.IsNaN(db) ? double.MinValue : db;
             }
         }
 
-
         private void ProcessData2(double[] input)
         {
-            for (int i = 0; i < _fftWindowSize; i++)
+            lock (_processLock)
             {
-                Complex c = new Complex();
-                if (i < input.Length)
+                if (input == null || input.Length == 0)
+                    return;
+
+                for (int i = 0; i < _fftWindowSize; i++)
                 {
-                    c.X = (float)(input[i] * FastFourierTransform.BlackmannHarrisWindow(i, _fftWindowSize));
-                } else
-                {
-                    c.X = 0;
+                    Complex c = new Complex();
+                    if (i < input.Length)
+                    {
+                        c.X = (float)(input[i] * FastFourierTransform.BlackmannHarrisWindow(i, _fftWindowSize));
+                    }
+                    else
+                    {
+                        c.X = 0;
+                    }
+                    c.Y = 0;
+                    _fftInput[i] = c;
                 }
-                c.Y = 0;
-                _fftInput[i] = c;
+
+                FastFourierTransform.FFT(true, _log2, _fftInput);
+
+                ComputeDbValues(_fftInput, DbValues);
+
+                Array.Copy(SpectrogramBuffer, FftDataPoints, SpectrogramBuffer, 0, (SpectrogramFrameCount - 1) * FftDataPoints);
+                for (var i = 0; i < FftDataPoints; i++)
+                {
+                    SpectrogramBuffer[SpectrogramFrameCount - 1, i] = DbValues[i];
+                }
+
+                Update?.Invoke(this, EventArgs.Empty);
             }
-
-            FastFourierTransform.FFT(true, _log2, _fftInput);
-
-            ComputeDbValues(_fftInput, DbValues);
-
-            Array.Copy(SpectrogramBuffer, FftDataPoints, SpectrogramBuffer, 0, (SpectrogramFrameCount - 1) * FftDataPoints);
-            for (var i = 0; i < FftDataPoints; i++)
-            {
-                SpectrogramBuffer[SpectrogramFrameCount - 1, i] = DbValues[i];
-            }
-
-            Update?.Invoke(this, EventArgs.Empty);
         }
 
         public void ProcessData3(double[] input)
         {
-
-            double[] paddedAudio = FftSharp.Pad.ZeroPad(input);
-            System.Numerics.Complex[] _fftInput = FftSharp.FFT.Forward(paddedAudio);
-            double[] fftMag = FftSharp.FFT.Power(_fftInput);
-            int fft_len = fftMag.Length > DbValues.Length ? DbValues.Length : fftMag.Length;
-            
-            Array.Copy(fftMag, DbValues, fft_len);
-            for(int i = fft_len; i < DbValues.Length; i++)
+            lock (_processLock)
             {
-                DbValues[i] = double.MinValue;
+                if (input == null || input.Length == 0)
+                    return;
+
+                try
+                {
+                    double[] paddedAudio = FftSharp.Pad.ZeroPad(input);
+                    System.Numerics.Complex[] fftInput = FftSharp.FFT.Forward(paddedAudio);
+                    double[] fftMag = FftSharp.FFT.Power(fftInput);
+                    int fft_len = Math.Min(fftMag.Length, DbValues.Length);
+                    
+                    Array.Copy(fftMag, DbValues, fft_len);
+                    for (int i = fft_len; i < DbValues.Length; i++)
+                    {
+                        DbValues[i] = double.MinValue;
+                    }
+
+                    for (var i = 0; i < DbValues.Length; i++)
+                    {
+                        SpectrogramBuffer[SpectrogramFrameCount - 1, i] = DbValues[i];
+                    }
+
+                    Update?.Invoke(this, EventArgs.Empty);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "Error in ProcessData3");
+                }
             }
-
-            for (var i = 0; i < DbValues.Length; i++)
-            {
-                SpectrogramBuffer[SpectrogramFrameCount - 1, i] = DbValues[i];
-            }
-
-            /* Array.Copy(SpectrogramBuffer, FftDataPoints, SpectrogramBuffer, 0, (SpectrogramFrameCount - 1) * FftDataPoints);
-             for (var i = 0; i < FftDataPoints; i++)
-             {
-                 SpectrogramBuffer[SpectrogramFrameCount - 1, i] = DbValues[i];
-             }*/
-
-            Update?.Invoke(this, EventArgs.Empty);
-
         }
-
     }
 }

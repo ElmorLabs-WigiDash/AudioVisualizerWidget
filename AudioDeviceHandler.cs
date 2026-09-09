@@ -11,9 +11,9 @@ namespace AudioVisualizerWidget
 {
     public class AudioDeviceHandler : IDisposable
     {
-        private CancellationTokenSource _cts = new CancellationTokenSource();
+        private CancellationTokenSource _cts;
         private CancellationToken _token;
-        private AutoResetEvent _processEvt = new AutoResetEvent(false);
+        private AutoResetEvent _processEvt;
         private WasapiLoopbackCaptureAlt _capture;
         private MMDevice _device;
         private WaveFormat _waveFormat;
@@ -31,29 +31,59 @@ namespace AudioVisualizerWidget
         //public double[] CurrentBuffer => _currentBuffer;
 
         private int SampleCount = 0;
+        private bool _disposed = false;
+        private readonly object _deviceLock = new object();
+        private readonly object _dataLock = new object();
 
         public event EventHandler DataReceived;
 
         private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
+        // Extended list of supported formats - added higher sample rates and channel counts
+        private List<WaveFormat> SupportedFormats = new List<WaveFormat>
+        {
+            // Primary formats - most common
+            WaveFormat.CreateIeeeFloatWaveFormat(44100, 2),
+            WaveFormat.CreateIeeeFloatWaveFormat(48000, 2),
+            
+            // Higher bit-depth formats
+            WaveFormat.CreateIeeeFloatWaveFormat(96000, 2),
+            WaveFormat.CreateIeeeFloatWaveFormat(192000, 2),
+            
+            // Multi-channel options
+            WaveFormat.CreateIeeeFloatWaveFormat(44100, 6),
+            WaveFormat.CreateIeeeFloatWaveFormat(48000, 6),
+            WaveFormat.CreateIeeeFloatWaveFormat(96000, 6),
+            
+            WaveFormat.CreateIeeeFloatWaveFormat(44100, 8),
+            WaveFormat.CreateIeeeFloatWaveFormat(48000, 8),
+            
+            // Fallback options
+            WaveFormat.CreateIeeeFloatWaveFormat(44100, 1),
+            WaveFormat.CreateIeeeFloatWaveFormat(48000, 1)
+        };
+
         public AudioDeviceHandler(MMDevice device)
         {
             Logger.Debug($"AudioDeviceHandler: Device: {device.FriendlyName}");
+            _cts = new CancellationTokenSource();
             _token = _cts.Token;
-            _device = device;
+            _device = device ?? throw new ArgumentNullException(nameof(device));
+            _processEvt = new AutoResetEvent(false);
 
             _waveFormat = GetSupportedWaveFormat(device);
 
             if (_waveFormat == null)
             {
                 Logger.Error("Could not get a supported waveformat!");
-                return;
+                throw new InvalidOperationException("No supported wave format found for this device");
             }
 
             SamplesPerSecond = _waveFormat.SampleRate;
 
             Logger.Debug($"AudioDeviceHandler: Sample rate: {SamplesPerSecond}");
 
+            // Adjust buffer size based on sample rate to maintain consistent time window
             BufferSize = SamplesPerSecond * 50 / 1000; // 50ms buffer
 
             Logger.Debug($"AudioDeviceHandler: Buffer size: {BufferSize}");
@@ -77,58 +107,101 @@ namespace AudioVisualizerWidget
 
             // Play silence to initialize the audio device
             Logger.Debug("AudioDeviceHandler: Playing Silence...");
-            var silence = new SilenceProvider(_waveFormat).ToSampleProvider();
-            _waveOut = new WaveOutEvent();
-            _waveOut.Init(silence);
-            _waveOut.Play();
+            InitializeSilenceOutput();
 
             Logger.Debug("AudioDeviceHandler: Starting audio capture...");
             _ = Task.Run(ProcessData, _cts.Token);
         }
 
-        private List<WaveFormat> SupportedFormats = new List<WaveFormat>
+        private void InitializeSilenceOutput()
         {
-            WaveFormat.CreateIeeeFloatWaveFormat(44100, 2),
-            WaveFormat.CreateIeeeFloatWaveFormat(48000, 2)/*,
-            WaveFormat.CreateIeeeFloatWaveFormat(44100, 6),
-            WaveFormat.CreateIeeeFloatWaveFormat(48000, 6),
-            WaveFormat.CreateIeeeFloatWaveFormat(44100, 8),
-            WaveFormat.CreateIeeeFloatWaveFormat(48000, 8)*/
-        };
+            try
+            {
+                if (_waveOut != null)
+                {
+                    _waveOut.Stop();
+                    _waveOut.Dispose();
+                }
+
+                var silence = new SilenceProvider(_waveFormat).ToSampleProvider();
+                _waveOut = new WaveOutEvent();
+                _waveOut.Init(silence);
+                _waveOut.Play();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error initializing silence output");
+            }
+        }
 
         private WaveFormat GetSupportedWaveFormat(MMDevice device)
         {
+            if (device == null || device.AudioClient == null)
+            {
+                Logger.Error("GetSupportedWaveFormat: Device or AudioClient is null");
+                return null;
+            }
+
             WaveFormat deviceMixFormat = device.AudioClient.MixFormat;
             WaveFormat returnFormat = null;
 
             Logger.Debug($"GetSupportedWaveFormat: Device MixFormat: {deviceMixFormat}");
-
-            int i = 0;
-            while(returnFormat == null && i<SupportedFormats.Count)
+            
+            // First try to match the device's own format with compatible parameters
+            try
             {
-                WaveFormat testFormat = SupportedFormats[i];
-                if (device.AudioClient.IsFormatSupported(AudioClientShareMode.Shared, testFormat))
+                // Try to create a IEEE float format that matches the device's native sample rate and channels
+                var matchedFormat = WaveFormat.CreateIeeeFloatWaveFormat(
+                    deviceMixFormat.SampleRate, 
+                    deviceMixFormat.Channels
+                );
+                
+                Logger.Debug($"Trying format matching device's native rate/channels: {matchedFormat}");
+                
+                if (device.AudioClient.IsFormatSupported(AudioClientShareMode.Shared, matchedFormat))
                 {
-                    returnFormat = testFormat;
-                    break;
+                    Logger.Debug("Device supports matched format!");
+                    return matchedFormat;
                 }
-                i++;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error creating matched format");
             }
 
-            if(returnFormat == null)
+            try
             {
-                Logger.Error("GetSupportedWaveFormat: Could not find a supported format, trying exclusive mode");
-                i = 0;
-                while (returnFormat == null && i < SupportedFormats.Count)
+                // First try shared mode with all supported formats
+                Logger.Debug("Trying shared mode formats...");
+                foreach (var format in SupportedFormats)
                 {
-                    WaveFormat testFormat = SupportedFormats[i];
-                    if (device.AudioClient.IsFormatSupported(AudioClientShareMode.Exclusive, testFormat))
+                    Logger.Debug($"Testing format: {format.SampleRate}Hz, {format.Channels} channels");
+                    if (device.AudioClient.IsFormatSupported(AudioClientShareMode.Shared, format))
                     {
-                        returnFormat = testFormat;
+                        returnFormat = format;
+                        Logger.Debug($"Found compatible format: {format.SampleRate}Hz, {format.Channels} channels");
                         break;
                     }
-                    i++;
                 }
+
+                // If shared mode failed, try exclusive mode
+                if (returnFormat == null)
+                {
+                    Logger.Debug("No shared mode format supported, trying exclusive mode...");
+                    foreach (var format in SupportedFormats)
+                    {
+                        if (device.AudioClient.IsFormatSupported(AudioClientShareMode.Exclusive, format))
+                        {
+                            returnFormat = format;
+                            Logger.Debug($"Found compatible exclusive format: {format.SampleRate}Hz, {format.Channels} channels");
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error finding supported wave format");
             }
 
             return returnFormat;
@@ -136,21 +209,45 @@ namespace AudioVisualizerWidget
 
         public void Start()
         {
-            if (_capture.CaptureState == CaptureState.Stopped)
+            if (_disposed) return;
+            
+            lock (_deviceLock)
             {
-                Logger.Debug("AudioDeviceHandler: Starting Capture...");
-                _capture?.StartRecording();
-                _waveOut?.Play();
+                if (_capture?.CaptureState == CaptureState.Stopped)
+                {
+                    Logger.Debug("AudioDeviceHandler: Starting Capture...");
+                    try
+                    {
+                        _capture?.StartRecording();
+                        _waveOut?.Play();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Error starting capture");
+                    }
+                }
             }
         }
 
         public void Stop()
         {
-            if (_capture?.CaptureState == CaptureState.Capturing)
+            if (_disposed) return;
+            
+            lock (_deviceLock)
             {
-                Logger.Debug("AudioDeviceHandler: Stopping Capture...");
-                _capture?.StopRecording();
-                _waveOut?.Stop();
+                if (_capture?.CaptureState == CaptureState.Capturing)
+                {
+                    Logger.Debug("AudioDeviceHandler: Stopping Capture...");
+                    try
+                    {
+                        _capture?.StopRecording();
+                        _waveOut?.Stop();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Error stopping capture");
+                    }
+                }
             }
         }
 
@@ -158,56 +255,148 @@ namespace AudioVisualizerWidget
         {
             while (!_token.IsCancellationRequested)
             {
-                if (_processEvt.WaitOne(20))
+                try
                 {
-                    lock (_input)
+                    if (_processEvt.WaitOne(20))
                     {
-                        SampleCount = 0;
-                        Array.Copy(_input, _inputBack, _input.Length);
-                        //Array.Copy(_input, _input.Length - _currentBuffer.Length - 1, _currentBuffer, 0, _currentBuffer.Length);
+                        lock (_dataLock)
+                        {
+                            SampleCount = 0;
+                            Array.Copy(_input, _inputBack, _input.Length);
+                            //Array.Copy(_input, _input.Length - _currentBuffer.Length - 1, _currentBuffer, 0, _currentBuffer.Length);
+                        }
+                        DataReceived?.Invoke(this, EventArgs.Empty);
                     }
-                    DataReceived?.Invoke(this, EventArgs.Empty);
+                }
+                catch (Exception ex)
+                {
+                    if (!_token.IsCancellationRequested)
+                    {
+                        Logger.Error(ex, "Error in ProcessData");
+                    }
                 }
             }
         }
 
         private void RecordingStopped(object sender, StoppedEventArgs e)
         {
+            if (e.Exception != null)
+            {
+                Logger.Error(e.Exception, "Recording stopped with exception");
+            }
+
             if (_token.IsCancellationRequested)
             {
-                _capture?.Dispose();
-                _device?.Dispose();
+                Logger.Debug("Recording stopped due to cancellation request");
             }
         }
 
         private void DataAvailable(object sender, WaveInEventArgs e)
         {
-            if (e.BytesRecorded == 0) return;
+            if (e.BytesRecorded == 0 || _disposed) return;
 
-            // We need to get off this thread ASAP to avoid losing frames
-            lock (_input)
+            try
             {
-                _reader.ReadSamples(e.Buffer, e.BytesRecorded, _input);
+                // We need to get off this thread ASAP to avoid losing frames
+                lock (_dataLock)
+                {
+                    _reader.ReadSamples(e.Buffer, e.BytesRecorded, _input);
+                }
+                SampleCount += e.BytesRecorded;
+                if (SampleCount > BufferSize / 2)
+                {
+                    _processEvt.Set();
+                    SampleCount = 0;
+                }
             }
-            SampleCount += e.BytesRecorded;
-            if (SampleCount > BufferSize / 2)
+            catch (Exception ex)
             {
-                _processEvt.Set();
-                SampleCount = 0;
+                Logger.Error(ex, "Error in DataAvailable");
             }
         }
 
         public void Dispose()
         {
-            Stop();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-            _capture?.Dispose();
-            _device?.Dispose();
-            
-            _waveOut?.Dispose();
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
 
-            try { _cts?.Cancel(); }
-            catch (Exception ex) { Logger.Error(ex, "Could not cancel capture task"); }
+            if (disposing)
+            {
+                _disposed = true;
+                
+                try
+                {
+                    Stop();
+                }
+                catch { }
+
+                try
+                {
+                    if (_capture != null)
+                    {
+                        _capture.DataAvailable -= DataAvailable;
+                        _capture.RecordingStopped -= RecordingStopped;
+                        _capture.Dispose();
+                        _capture = null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "Error disposing capture");
+                }
+
+                try
+                {
+                    _device?.Dispose();
+                    _device = null;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "Error disposing device");
+                }
+                
+                try
+                {
+                    _waveOut?.Dispose();
+                    _waveOut = null;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "Error disposing waveOut");
+                }
+
+                try
+                {
+                    _cts?.Cancel();
+                    _cts?.Dispose();
+                    _cts = null;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "Error cancelling capture task");
+                }
+
+                try
+                {
+                    _processEvt?.Dispose();
+                    _processEvt = null;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "Error disposing processEvt");
+                }
+            }
+        }
+
+        ~AudioDeviceHandler()
+        {
+            Dispose(false);
         }
     }
 }
