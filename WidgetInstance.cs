@@ -61,6 +61,7 @@ namespace AudioVisualizerWidget
         private AudioDataAnalyzer _audioDataAnalyzer;
 
         private Dictionary<int, double> _frequencyDataSeries = new Dictionary<int, double>();
+        private long _lastFrequencyChecksum;
 
         private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
@@ -629,14 +630,28 @@ namespace AudioVisualizerWidget
                         g.Clear(_visualizerBgColor);
                     }
 
-                    // Clean up Infinity/NaN values
+                    // Clean up Infinity/NaN values and compute a frame checksum
+                    // so we can skip re-rendering when frequency data did not change.
+                    long checksum = 17;
                     foreach (var key in frequencyDataCopy.Keys.ToList())
                     {
-                        if (double.IsInfinity(frequencyDataCopy[key]) || double.IsNaN(frequencyDataCopy[key]))
+                        double value = frequencyDataCopy[key];
+                        if (double.IsInfinity(value) || double.IsNaN(value))
                         {
-                            frequencyDataCopy[key] = 0;
+                            value = 0;
+                            frequencyDataCopy[key] = value;
                         }
+
+                        checksum = unchecked((checksum * 31) + key);
+                        checksum = unchecked((checksum * 31) + value.GetHashCode());
                     }
+
+                    if (checksum == _lastFrequencyChecksum)
+                    {
+                        return;
+                    }
+
+                    _lastFrequencyChecksum = checksum;
 
                     // Draw graph in log10 scale between 20Hz and 25kHz. Y axis is from -200 to 0.
                     var plt = new Plot(WidgetSize.ToSize().Width, WidgetSize.ToSize().Height);
