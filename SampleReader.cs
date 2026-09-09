@@ -1,10 +1,13 @@
 ﻿using NAudio.Wave;
 using System;
+using WigiDashWidgetFramework.Logging;
 
 namespace AudioVisualizerWidget
 {
     class SampleReader
     {
+        private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
+
         private readonly int _bytesPerSample;
         private readonly int _bytesPerFrame;
         private readonly int _channels;
@@ -96,9 +99,10 @@ namespace AudioVisualizerWidget
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Skip this channel if there's an error
+                    Logger.Warn(ex, $"Failed to read sample for audio channel {i}, skipping channel");
                 }
             }
             

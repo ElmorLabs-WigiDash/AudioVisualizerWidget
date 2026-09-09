@@ -1,10 +1,10 @@
 ﻿using NAudio.Dsp;
-using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WigiDashWidgetFramework.Logging;
 
 namespace AudioVisualizerWidget
 {

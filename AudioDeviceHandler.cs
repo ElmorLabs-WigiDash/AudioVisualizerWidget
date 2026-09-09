@@ -1,11 +1,11 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
-using NLog;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Documents;
+using WigiDashWidgetFramework.Logging;
 
 namespace AudioVisualizerWidget
 {
@@ -334,7 +334,10 @@ namespace AudioVisualizerWidget
                 {
                     Stop();
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "Error stopping capture during dispose");
+                }
 
                 try
                 {
