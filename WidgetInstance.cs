@@ -58,6 +58,10 @@ namespace AudioVisualizerWidget
         private AudioDataAnalyzer _audioDataAnalyzer;
 
         private Dictionary<int, double> _frequencyDataSeries = new Dictionary<int, double>();
+        // Checksum of the last rendered frequency data, so DrawWidget can skip allocating and
+        // rendering a new Plot when the spectrum hasn't changed since the previous 100ms tick
+        // (e.g. during silence).
+        private long _lastFrequencyChecksum;
 
         private static Logger Logger { get; } = LogManager.GetCurrentClassLogger();
 
@@ -390,28 +394,41 @@ namespace AudioVisualizerWidget
             // Check drawing conditions and frequency data values
             if (_bitmapLock.WaitOne(mutex_timeout))
             {
-                using (Graphics g = Graphics.FromImage(_bitmapCurrent))
-                {
-                    // Set smoothing mode
-                    //g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-                    // Clear board to draw visualizer
-                    g.Clear(_visualizerBgColor);
-                }
-
                 lock (_frequencyDataSeries)
                 {
                     lock (_frequencyDataSeries.Keys)
                     {
                         lock (_frequencyDataSeries.Values)
                         {
-                            // If _frequencyDataSeries has Infinity or NaN values, set them to 0
+                            // If _frequencyDataSeries has Infinity or NaN values, set them to 0,
+                            // and checksum the (cleaned) values as we go.
+                            long checksum = 0;
                             foreach (var key in _frequencyDataSeries.Keys.ToList())
                             {
                                 if (double.IsInfinity(_frequencyDataSeries[key]) || double.IsNaN(_frequencyDataSeries[key]))
                                 {
                                     _frequencyDataSeries[key] = 0;
                                 }
+                                checksum = unchecked(checksum * 31 + key.GetHashCode() + BitConverter.DoubleToInt64Bits(_frequencyDataSeries[key]));
+                            }
+
+                            // Skip re-rendering entirely if the spectrum hasn't changed since the
+                            // last tick (e.g. during silence) - avoids allocating and rendering a
+                            // new Plot at 10Hz for a frame identical to what's already on screen.
+                            if (checksum == _lastFrequencyChecksum)
+                            {
+                                _bitmapLock.ReleaseMutex();
+                                return;
+                            }
+                            _lastFrequencyChecksum = checksum;
+
+                            using (Graphics g = Graphics.FromImage(_bitmapCurrent))
+                            {
+                                // Set smoothing mode
+                                //g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                                // Clear board to draw visualizer
+                                g.Clear(_visualizerBgColor);
                             }
 
                             // Draw graph in log10 scale between 20Hz and 25kHz. Y axis is from -200 to 0.
