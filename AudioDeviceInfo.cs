@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using WigiDashWidgetFramework.Logging;
+using NLog;
 
 namespace AudioVisualizerWidget
 {

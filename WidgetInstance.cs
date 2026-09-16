@@ -10,7 +10,7 @@ using System.Windows.Controls;
 using System.Threading.Tasks;
 using ScottPlot;
 using MathNet.Numerics.Interpolation;
-using WigiDashWidgetFramework.Logging;
+using NLog;
 
 namespace AudioVisualizerWidget
 {
