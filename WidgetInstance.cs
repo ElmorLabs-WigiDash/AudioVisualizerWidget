@@ -624,12 +624,6 @@ namespace AudioVisualizerWidget
                     
                 try
                 {
-                    using (Graphics g = Graphics.FromImage(_bitmapCurrent))
-                    {
-                        // Clear board to draw visualizer
-                        g.Clear(_visualizerBgColor);
-                    }
-
                     // Clean up Infinity/NaN values and compute a frame checksum
                     // so we can skip re-rendering when frequency data did not change.
                     long checksum = 17;
@@ -652,6 +646,12 @@ namespace AudioVisualizerWidget
                     }
 
                     _lastFrequencyChecksum = checksum;
+
+                    using (Graphics g = Graphics.FromImage(_bitmapCurrent))
+                    {
+                        // Clear board to draw visualizer
+                        g.Clear(_visualizerBgColor);
+                    }
 
                     // Draw graph in log10 scale between 20Hz and 25kHz. Y axis is from -200 to 0.
                     var plt = new Plot(WidgetSize.ToSize().Width, WidgetSize.ToSize().Height);
